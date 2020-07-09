@@ -133,4 +133,17 @@ process_one_year <- function (year) {
   return(mydata)
 }
 
+all_data <- NULL
 
+for (i in begin_year:end_year) {
+  year_data <- process_one_year(i)
+
+  if (is.null(all_data)) {
+    all_data <- year_data
+  } else {
+    all_data %<>%
+      bind_rows(year_data)
+  }
+}
+
+write.csv(all_data, file.path(output_dir, output_file(paste0(begin_year, '_to_', end_year))), row.names = FALSE)
