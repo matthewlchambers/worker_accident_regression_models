@@ -4,8 +4,8 @@ library(maptools)
 library(rgdal)
 library(sp)
 library(sf)
-
 library(exactextractr)
+
 year_single = as.numeric(commandArgs(trailingOnly=TRUE))
 
 if (!dir.exists(paste0("./", year_single))) {
