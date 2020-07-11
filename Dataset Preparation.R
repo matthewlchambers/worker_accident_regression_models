@@ -146,4 +146,4 @@ for (i in begin_year:end_year) {
   }
 }
 
-write.csv(all_data, file.path(output_dir, output_file(paste0(begin_year, '_to_', end_year))), row.names = FALSE)
+write_csv(all_data, file.path(output_dir, output_file(paste0(begin_year, '_to_', end_year))))

@@ -8,16 +8,11 @@
 # raster image by region using a shapefile. Tidyverse is for general data manipulation, magrittr supplies the
 # pipe operators such as %>% and %<>%, and lubridate provides tools for working intelligently with dates.
 library(raster)
-library(ncdf4)
 library(exactextractr)
 library(tidyverse)
 library(magrittr)
 library(lubridate)
 library(sf)
-
-# Define the years to be covered
-begin_year <- 2003
-end_year <- 2016
 
 # Define input parameters for the shapefile outlining the regions for which we want summarized data
 shapefile_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/County Shapefile'
@@ -32,33 +27,55 @@ temperature_file <- function (year) return(paste0('air.2m.', year, '.nc'))
 
 # Define output parameters for the output data file(s) to be saved.
 output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Weather Data'
-output_file <- function (type = NULL) return(paste0(type, '_data', '.csv'))
+output_file <- function (year, type = NULL) return(paste0(year, '_', type, '_data', '.csv'))
 
-# Ensure the output directory exists, and ask to create it or get a new directory name if it doesn't.
-while (TRUE) {
-  if (dir.exists(output_dir)) break else {
-    create_dir <- readline(prompt = paste('Output directory', output_dir, 'does not exist. Create it (Y/N)? '))
-    if (create_dir == 'Y') dir.create(output_dir) else {
-      output_dir <- readline(prompt = 'Please enter desired output directory, or QUIT to quit: ')
-      if (output_dir == 'QUIT') quit(status = 42)
-    }
-  }
-}
+############# Only the stuff above this line should need to be changed for running on the cluster. #####################
 
-# For testing purposes, before I build the for loop to contain all this:
-year <- 2003
+# For testing purposes, before I run this as an array job on the cluster (or locally using a for loop).
+year <- 2005
+
+## Define begin and end years if this will be run locally using a loop
+#begin_year <- 2003
+#end_year <- 2016
+
+## Get the year to process from the command line, if this will be run as an array job on the Vanderbilt cluster
+#year <- as.numeric(commandArgs(trailingOnly=TRUE)[2])
 
 # Download the files for the year in question to the temporary directory.
 setwd(tempdir())
 system(paste('wget -nc', paste0(precipitation_dir, precipitation_file(year))))
 system(paste('wget -nc', paste0(temperature_dir, temperature_file(year))))
 
-# Open the files so I can extract data.
+# Open the files so I can extract data. Raster bricks are incredibly convenient to work with.
 precipitation_brick <- brick(precipitation_file(year)) # tempdir() already set as working directory
 temperature_brick <- brick(temperature_file(year)) # tempdir() already set as working directory
 
-# Open the shapefile, so I can extract daily means of the weather variables.
+# Open the shapefile, so I can extract daily means of the weather variables by county.
 counties <- st_read(file.path(shapefile_dir, shapefile_file()))
 
-# I don't think the line below is doing what I want.
-test <- exact_extract(temperature_brick, counties)
+# Extract the weather data and create tibbles with the fips information attached.
+mean_temperature_data <- temperature_brick %>% exact_extract(counties, 'mean') %>%
+  bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+mean_precipitation_data <- precipitation_brick %>% exact_extract(counties, 'mean') %>%
+  bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+
+# Reshape the tibbles so that each observation corresponds to a county-day, and change the date variable to
+# an R readable date variables.
+mean_temperature_data %<>%
+  pivot_longer(
+    starts_with('mean.X'),
+    names_to = 'date',
+    names_prefix = 'mean.X',
+    values_to = 'mean_temperature'
+  ) %>% mutate(date = date %>% ymd())
+mean_precipitation_data %<>%
+  pivot_longer(
+    starts_with('mean.X'),
+    names_to = 'date',
+    names_prefix = 'mean.X',
+    values_to = 'mean_precipitation'
+  ) %>% mutate(date = date %>% ymd())
+
+# Merge the weather data together into a single tibble, then save as a csv
+weather_data <- left_join(mean_temperature_data, mean_precipitation_data)
+write_csv(weather_data, file.path(output_dir, output_file(year,'mean_temp_mean_precip')))
