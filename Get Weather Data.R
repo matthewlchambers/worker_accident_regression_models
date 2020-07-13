@@ -34,7 +34,7 @@ output_file <- function (year, type = NULL) return(paste0(year, '_', type, '_dat
 #year <- 2005
 
 # Define begin and end years
-begin_year <- 2003
+begin_year <- 2016
 end_year <- 2016
 
 

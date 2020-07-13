@@ -12,7 +12,7 @@ library(lubridate)
 # Define the years to be covered. Note that OSHA accidents don't consistently have the establishment's
 # NAICS code until 2003.
 begin_year <- 2003
-end_year <- 2016
+end_year <- 2015
 
 # Define input parameters for the different sources of data.
 osha_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/OSHA data scraping'
@@ -26,6 +26,9 @@ qcew_file <- function (year) return(paste0(year, '.q1-q4.singlefile.csv'))
 inversion_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Inversion data'
 inversion_file <- function (year) return(paste0('inversions_', year, '.csv'))
 
+weather_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Weather Data'
+weather_file <- function (year) return(paste0(year, '_mean_temp_mean_precip_data.csv'))
+
 # Define output parameters for the cleaned data file(s) to be saved.
 output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Data for Regression Models'
 output_file <- function (type = NULL) return(paste0('construction_accidents_', type, '.csv'))
@@ -38,9 +41,11 @@ read_in_osha <- function (year) {
   X <- read_csv(file.path(osha_data_dir, osha_file(year)), col_types = osha_input_column_types, progress = FALSE) %>%
   # For some reason, reading the date column in as a date doesn't work, so I have to read it in as character and
   # parse it to a date here.
-  mutate(event_date = mdy(event_date)) %>% rename(date = event_date) %>%
-  mutate(naics = gsub('X', '', naics) %>% as.integer()) %>%
-  mutate(sic = gsub('X', '', sic) %>% as.integer())
+    mutate(event_date = mdy(event_date)) %>% rename(date = event_date) %>%
+    mutate(naics = gsub('X', '', naics) %>% as.integer()) %>%
+    mutate(sic = gsub('X', '', sic) %>% as.integer()) %>%
+    # Drop duplicate observations
+    distinct(date, est_address, .keep_all = TRUE)
   return (X)
 }
 
@@ -50,7 +55,7 @@ read_in_qcew <- function (year) {
   # Some rows have parsing errors due to fips codes beginning with 'C'. These are statistical areas which overlap
   # counties and must therefore be excluded to avoid double counting. Because of the parsing errors, these have
   # NA in the area_fips column.
-  drop_na(area_fips) %>% rename(fips = area_fips)
+    drop_na(area_fips) %>% rename(fips = area_fips)
   return (X)
 }
 
@@ -68,10 +73,20 @@ read_in_geocodes <- function () {
   return (X)
 }
 
+read_in_weather <- function (year) {
+  weather_input_column_types <- 'iDdd'
+  X <- read_csv(file.path(weather_data_dir, weather_file(year)),
+                col_types = weather_input_column_types, progress = FALSE)
+  return (X)
+}
+
 process_one_year <- function (year) {
+  # Read in all the data I need for this year.
   qcew_data <- read_in_qcew(year)
   osha_data <- read_in_osha(year)
   inversion_data <- read_in_inversions(year)
+  weather_data <- read_in_weather(year)
+  geocoded_addresses <- read_in_geocodes()
 
   # I only want to consider privately owned establishments, as OSHA's applicability to government workplaces
   # is inconsistent. Fortunately, both the QCEW and OSHA data include information on firm ownership. So I
@@ -107,22 +122,28 @@ process_one_year <- function (year) {
     group_by(fips, year, month) %>% fill(total_employment, .direction = 'downup') %>% ungroup() %>%
     filter(agglvl_code == 74) %>% select(-agglvl_code)
 
-  # Now I work with the OSHA data, and the first thing I need to do is load the file of geocoded addresses
-  # so I can identify the county in whcih each accident occurred.
-  geocoded_addresses <- read_in_geocodes()
+  # Now I work with the OSHA data.
   osha_data %<>%
     # First, to save time and memory, I filter to construction only and drop the NAICS code
     mutate(naics_2 = floor(naics / 10000) %>% as.integer()) %>%
     filter(naics_2 == 23) %>% select(-c('naics', 'naics_2', 'sic')) %>%
     # Now I merge in the FIPS code from my geocoded address file, and drop any observations which could
     # not be geocoded.
-    left_join(geocoded_addresses) %>% drop_na(fips) %>% select(-est_address)
+    left_join(geocoded_addresses) %>% drop_na(fips) %>% select(-est_address) %>%
+    # I group by county and date, then get the sum of persons injured (in case of multiple accidents), as well as
+    # the number of incidents.
+    group_by(fips, date) %>% summarize(num_injured = num_injured %>% sum(), num_accidents = n())
 
   # I now assemble my main data file. The inversion data for a given year are my starting point, since they
   # constitute a nice balanced panel.
   mydata <- inversion_data %>%
-    # First I merge in the OSHA accident data.
-    left_join(osha_data) %>% mutate(num_injured = replace_na(num_injured, 0) %>% as.integer()) %>%
+    # First I merge in the weather data
+    left_join(weather_data) %>%
+    # Then I merge in the OSHA accident data.
+    left_join(osha_data) %>%
+    # Replace NAs (days unrepresented in the OSHA data) with 0s, as they represent observations with no accident.
+    mutate(num_injured = num_injured %>% replace_na(0) %>% as.integer()) %>%
+    mutate(num_accidents = num_accidents %>% replace_na(0) %>% as.integer()) %>%
     # Then I merge in the QCEW employment data, after creating year and month variables to merge on. I then
     # drop the year and month variables since I no longer need them.
     mutate(year = year(date)) %>% mutate(month = month(date)) %>%
