@@ -3,6 +3,9 @@
 # Created by: Matthew Chambers
 # Created on: 7/3/2020
 
+# Load the necessary packages. Tidyverse is for general data manipulation, magrittr supplies the pipe operators
+# such as %>% and %<>%, lubridate provides tools for working intelligently with dates, and haven allows
+# me to work with Stata format .dta files.
 library(magrittr)
 library(lubridate)
 library(tidyverse)
@@ -24,9 +27,11 @@ conversion_constant <- (ymd_hms('1970-01-01 00:00:00') - ymd_hms('1800-01-01 00:
 begin_year <- 2000
 end_year <- 2016
 
+# Loop over the years to create a data file for each one.
 for (year in begin_year:end_year) {
   year_data <- NULL
 
+  # Loop over the months since the data files from Bing Yang Tan include a separate file for each month.
   for (month in 1:12) {
     month_data <- read_dta(file.path(input_dir, input_file(year, month))) %>%
       # Convert the time (which begins as hours since 1-1-1800) into a date-time.
