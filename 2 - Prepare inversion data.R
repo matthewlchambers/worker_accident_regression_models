@@ -12,11 +12,11 @@ library(tidyverse)
 library(haven)
 
 # Define input parameters
-input_dir <- 'C:/Users/Matthew Chambers/Desktop/Inversion Data/Stata files from Bing Yang'
+input_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Inversion data/Stata files from Bing Yang'
 input_file <- function (year, month) return (paste0('inversions_', year, str_pad(month, 2, pad = '0'), '.dta'))
 
 # Define output parameters
-output_dir <- 'C:/Users/Matthew Chambers/Desktop/Inversion Data'
+output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Inversion data'
 output_file_prefix <- function (year) return (paste0('inversions_', year, '.csv'))
 
 # Save the number of seconds from 1-1-1800 to 1-1-1970 as a constant, for converting date-times later.
