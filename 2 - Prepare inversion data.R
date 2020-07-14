@@ -17,7 +17,7 @@ input_file <- function (year, month) return (paste0('inversions_', year, str_pad
 
 # Define output parameters
 output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Inversion data'
-output_file_prefix <- function (year) return (paste0('inversions_', year, '.csv'))
+output_file <- function (year) return (paste0('inversions_', year, '.csv'))
 
 # Save the number of seconds from 1-1-1800 to 1-1-1970 as a constant, for converting date-times later.
 conversion_constant <- (ymd_hms('1970-01-01 00:00:00') - ymd_hms('1800-01-01 00:00:00')) %>%
