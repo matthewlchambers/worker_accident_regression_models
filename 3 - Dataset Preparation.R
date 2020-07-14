@@ -80,24 +80,13 @@ read_in_weather <- function (year) {
   return (X)
 }
 
-process_one_year <- function (year) {
-  # Read in all the data I need for this year.
+process_qcew_year <- function (year) {
   qcew_data <- read_in_qcew(year)
-  osha_data <- read_in_osha(year)
-  inversion_data <- read_in_inversions(year)
-  weather_data <- read_in_weather(year)
-  geocoded_addresses <- read_in_geocodes()
 
-  # I only want to consider privately owned establishments, as OSHA's applicability to government workplaces
-  # is inconsistent. Fortunately, both the QCEW and OSHA data include information on firm ownership. So I
-  # filter both datasets to only include privately owned establishments.
   qcew_data %<>%
-    filter(own_code == 5) %>% select(-own_code)
-  osha_data %<>%
-    filter(ownership == 'Private') %>% select(-ownership)
-
-  # First I work with the QCEW data
-  qcew_data %<>%
+    # I only want to consider privately owned establishments, as OSHA's applicability to government workplaces
+    # is inconsistent.
+    filter(own_code == 5) %>% select(-own_code) %>%
     # Per https://data.bls.gov/cew/doc/titles/agglevel/agglevel_titles.htm, aggregation level 74 represents data
     # aggregated by county, sector (2 digit NAICS), and ownership groups. Aggregation level 71 contains county level
     # total employment, which I also need. NAICS code 23 represents the construction industry, which I am
@@ -119,11 +108,20 @@ process_one_year <- function (year) {
     # I now create a new variables for total employment using aggregation level 71, then group observations
     # to fill that value in for all aggregation level 74 (specific industry) observations
     mutate(total_employment = ifelse(agglvl_code == 71, employment, NA)) %>%
-    group_by(fips, year, month) %>% fill(total_employment, .direction = 'downup') %>% ungroup() %>%
+    group_by(fips, month) %>% fill(total_employment, .direction = 'downup') %>% ungroup() %>%
     filter(agglvl_code == 74) %>% select(-agglvl_code)
 
-  # Now I work with the OSHA data.
+  return (qcew_data)
+}
+
+process_osha_year <- function (year) {
+  osha_data <- read_in_osha(year)
+  geocoded_addresses <- read_in_geocodes()
+
   osha_data %<>%
+    # I only want to consider privately owned establishments, as OSHA's applicability to government workplaces
+    # is inconsistent.
+    filter(ownership == 'Private') %>% select(-ownership) %>%
     # First, to save time and memory, I filter to construction only and drop the NAICS code
     mutate(naics_2 = floor(naics / 10000) %>% as.integer()) %>%
     filter(naics_2 == 23) %>% select(-c('naics', 'naics_2', 'sic')) %>%
@@ -134,7 +132,17 @@ process_one_year <- function (year) {
     # the number of incidents.
     group_by(fips, date) %>% summarize(num_injured = num_injured %>% sum(), num_accidents = n())
 
-  # I now assemble my main data file. The inversion data for a given year are my starting point, since they
+  return (osha_data)
+}
+
+process_one_year <- function (year) {
+  # Read in all the data I need for this year.
+  qcew_data <- process_qcew_year(year)
+  osha_data <- process_osha_year(year)
+  inversion_data <- read_in_inversions(year)
+  weather_data <- read_in_weather(year)
+
+  # I assemble my main data file. The inversion data for a given year are my starting point, since they
   # constitute a nice balanced panel.
   mydata <- inversion_data %>%
     # First I merge in the weather data
