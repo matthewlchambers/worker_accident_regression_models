@@ -15,7 +15,7 @@ library(magrittr)
 library(lubridate)
 library(sf)
 
-# Define input parameters for the shapefile outlining the regions for which we want summarized data
+# Define input parameters for the shapefile outlining the regions for which I want summarized data
 shapefile_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/County Shapefile'
 shapefile_file <- function () return('cb_2016_us_county_20m.shp')
 
