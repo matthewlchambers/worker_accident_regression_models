@@ -98,7 +98,6 @@ rasterize_year <- function (year) {
   colnames(Temp$Values) <- year_date_list %>% lapply(paste)
   spg <- Temp
   coordinates(spg) <- ~ Lon + Lat
-  e <- extent(spg)
   r <- raster(ext=extent(spg),ncol=500,nrow=500)
   crs(r)<-"+proj=longlat +ellps=WGS84 +datum=WGS84"
   x <- rasterize(Temp[,c("Lon","Lat")], r, Temp$Values, fun=mean)
@@ -130,4 +129,6 @@ process_year <- function (year) {
   write_csv(mean_pollution_data, file.path(output_dir, output_file(year)))
 }
 
-process_year(2000)
+for (year in begin_year:end_year) {
+  process_year(year)
+}
