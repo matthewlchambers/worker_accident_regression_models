@@ -92,10 +92,6 @@ rasterize_year <- function (year) {
   # Make a list of dates within a year so I can open all the files for assembly into a raster brick.
   year_date_list <- ymd(paste0(year, '01', '01')):ymd(paste0(year, '12', '31')) %>% as_date() %>% as.list()
 
-  ## This is a test line that needs to be removed as soon as possible:
-  #year_date_list <- ymd('20000113'):ymd('20000117') %>% as_date() %>% as.list()
-
-  #
   raw_pollution_matrix <- lapply(year_date_list, read_in_day) # This corresponds to a list of 'TempData' objects
   left_multiply_by_dist_weights <- function (data_matrix) return ((dists_weight%*%data_matrix)@x)
   Temp$Values <- sapply(raw_pollution_matrix, left_multiply_by_dist_weights)
