@@ -60,6 +60,6 @@ Temp$Value <- (dists_weight%*%TempData)@x
 spg <- Temp
 coordinates(spg) <- ~ Lon + Lat
 e <- extent(spg)
-r <- raster(ext=extent(spg),ncol=2500,nrow=2500)
+r <- raster(ext=extent(spg),ncol=200,nrow=200)
 crs(r)<-"+proj=longlat +ellps=WGS84 +datum=WGS84"
 x <- rasterize(Temp[,c("Lon","Lat")], r, Temp$Value, fun=mean)

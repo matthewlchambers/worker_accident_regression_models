@@ -17,18 +17,18 @@ library(sf)
 
 # Define input parameters for the shapefile outlining the regions for which I want summarized data
 shapefile_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/County Shapefile'
-shapefile_file <- function () return('cb_2016_us_county_20m.shp')
+shapefile_file <- function () return ('cb_2016_us_county_20m.shp')
 
 # Define input parameters for the files we wish to download. Note that the ftp directories must inlcude / at
 # the end, since they will be pasted to gether with the filename to get a url.
 precipitation_dir <- 'ftp://ftp.cdc.noaa.gov/Datasets/NARR/Dailies/monolevel/'
-precipitation_file <- function (year) return(paste0('apcp.', year, '.nc'))
+precipitation_file <- function (year) return (paste0('apcp.', year, '.nc'))
 temperature_dir <- 'ftp://ftp.cdc.noaa.gov/Datasets/NARR/Dailies/monolevel/'
-temperature_file <- function (year) return(paste0('air.2m.', year, '.nc'))
+temperature_file <- function (year) return (paste0('air.2m.', year, '.nc'))
 
 # Define output parameters for the output data file(s) to be saved.
 output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Weather Data'
-output_file <- function (year, type = NULL) return(paste0(year, '_', type, '_data', '.csv'))
+output_file <- function (year, type = NULL) return (paste0(year, '_', type, '_data', '.csv'))
 
 ## For testing purposes, before I run this locally using a for loop.
 #year <- 2005

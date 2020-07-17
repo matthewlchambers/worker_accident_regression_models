@@ -83,19 +83,25 @@ get_dists_weight <- function () {
 # Again, this is something I only want to have to do once.
 dists_weight <- get_dists_weight()
 
-rasterize_year <- function (year) {
+rasterize_range <- function (beg_date, end_date) {
   # The following code is pieced together from code provided to me by Dr. Qian Di along with the data files.
   # I've modified it to create a raster brick from a series of dates, rather than having to rasterize each
   # day individually.
+
+  # This function does exactly what its name implies :-) The dist_weights matrix was generated earlier.
+  left_multiply_by_dist_weights <- function (data_matrix) return ((dists_weight %*% data_matrix)@x)
+
+  # For some reason, both the variable named spg and attaching the weighted matrix to Temp as Temp$Values
+  # are necessary for the rasterization to work. I'm not sure why, but it would take too long to try and solve.
   Temp<-region_of_interest
-
   # Make a list of dates within a year so I can open all the files for assembly into a raster brick.
-  year_date_list <- ymd(paste0(year, '01', '01')):ymd(paste0(year, '12', '31')) %>% as_date() %>% as.list()
-
-  raw_pollution_matrix <- lapply(year_date_list, read_in_day) # This corresponds to a list of 'TempData' objects
-  left_multiply_by_dist_weights <- function (data_matrix) return ((dists_weight%*%data_matrix)@x)
+  date_list <- beg_date:end_date %>% as_date() %>% as.list()
+  # Read in the list of raw pollution data from Di, et al. for each date in the given range. This corresponds
+  # to a list of 'TempData' objects from Dr. Di's original code.
+  raw_pollution_matrix <- lapply(date_list, read_in_day)
+  # This generates the correctly weighted PM2.5 values for each grid point.
   Temp$Values <- sapply(raw_pollution_matrix, left_multiply_by_dist_weights)
-  colnames(Temp$Values) <- year_date_list %>% lapply(paste)
+  colnames(Temp$Values) <- date_list %>% lapply(paste)
   spg <- Temp
   coordinates(spg) <- ~ Lon + Lat
   r <- raster(ext=extent(spg),ncol=500,nrow=500)
@@ -106,27 +112,49 @@ rasterize_year <- function (year) {
 }
 
 process_year <- function (year) {
-  # Get the pollution data raster
-  pollution_raster <- rasterize_year(year)
-
   # Open the shapefile, so I can extract daily means of the weather variables by county.
   counties <- st_read(file.path(shapefile_dir, shapefile_file()))
+  # I have to split up the year into blocks to work with for memory purposes. First, set the size of those blocks
+  date_block_size <- 10 %>% days()
+  # Initialize values before starting the loop
+  beg_date <- ymd(paste0(year, '0101'))
+  year_data <- NULL
 
-  # Use exactextractr to get county level mean pollution
-  mean_pollution_data <- pollution_raster %>% exact_extract(counties, 'mean') %>% #as_tibble_col(column_name = 'pm25') %>%
-    bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+  while (beg_date <= ymd(paste0(year, '1231'))) {
+    # Set the end date for this block. Don't run past the end of the year, and remember that ranges in R are inclusive.
+    end_date <- min(beg_date + date_block_size - days(), ymd(paste0(year, '1231')))
 
-  # Reshape the tibbles so that each observation corresponds to a county-day, and change the date variable to
-  # an R readable date variables.
-  mean_pollution_data %<>%
-    pivot_longer(
-      starts_with('mean.X'),
-      names_to = 'date',
-      names_prefix = 'mean.X',
-      values_to = 'mean_temperature'
-    ) %>% mutate(date = date %>% ymd())
+    # Get the pollution data raster
+    pollution_raster <- rasterize_range(beg_date, end_date)
 
-  write_csv(mean_pollution_data, file.path(output_dir, output_file(year)))
+    # Use exactextractr to get county level mean pollution
+    mean_pollution_data <- pollution_raster %>% exact_extract(counties, 'mean') %>% #as_tibble_col(column_name = 'pm25') %>%
+      bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+
+    # Reshape the tibble so that each observation corresponds to a county-day, and change the date variable to
+    # an R readable date variables.
+    mean_pollution_data %<>%
+      pivot_longer(
+        starts_with('mean.X'),
+        names_to = 'date',
+        names_prefix = 'mean.X',
+        values_to = 'mean_pm25'
+      ) %>% mutate(date = date %>% ymd())
+
+    # Bind the different blocks together to produce a single data file for the year.
+    if (year_data %>% is.null()) {
+      year_data <- mean_pollution_data
+    } else {
+      year_data %<>%
+        bind_rows(mean_pollution_data)
+    }
+
+    # Update beg_date
+    beg_date <- beg_date + date_block_size
+  }
+
+  # After finishing the while loop, write the entire year to a csv.
+  write_csv(year_data, file.path(output_dir, output_file(year)))
 }
 
 for (year in begin_year:end_year) {
