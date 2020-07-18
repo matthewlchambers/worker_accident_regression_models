@@ -16,18 +16,21 @@ end_year <- 2015
 
 # Define input parameters for the different sources of data.
 osha_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/OSHA data scraping'
-osha_file <- function (year) return(paste0('osha_fatality_catastrophe_incidents_', year, '.csv'))
+osha_file <- function (year) return (paste0('osha_fatality_catastrophe_incidents_', year, '.csv'))
 # I have a file with geocoded addresses to label the OSHA incidents with.
 geocode_file <- 'geocoded_addresses.csv'
 
 qcew_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/QCEW'
-qcew_file <- function (year) return(paste0(year, '.q1-q4.singlefile.csv'))
+qcew_file <- function (year) return (paste0(year, '.q1-q4.singlefile.csv'))
 
 inversion_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Inversion data'
-inversion_file <- function (year) return(paste0('inversions_', year, '.csv'))
+inversion_file <- function (year) return (paste0('inversions_', year, '.csv'))
 
 weather_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Weather Data'
-weather_file <- function (year) return(paste0(year, '_mean_temp_mean_precip_data.csv'))
+weather_file <- function (year) return (paste0(year, '_mean_temp_mean_precip_data.csv'))
+
+pollution_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Pollution Data'
+pollution_file <- function (year) return (paste0('PM25_prediction_', year, '.csv'))
 
 # Define output parameters for the cleaned data file(s) to be saved.
 output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Data for Regression Models'
@@ -77,6 +80,13 @@ read_in_weather <- function (year) {
   weather_input_column_types <- 'iDdd'
   X <- read_csv(file.path(weather_data_dir, weather_file(year)),
                 col_types = weather_input_column_types, progress = FALSE)
+  return (X)
+}
+
+read_in_pollution <- function (year) {
+  pollution_input_column_types <- 'iDd'
+  X <- read_csv(file.path(pollution_data_dir, pollution_file(year)),
+                col_types = pollution_input_column_types, progress = FALSE)
   return (X)
 }
 
@@ -141,12 +151,15 @@ process_one_year <- function (year) {
   osha_data <- process_osha_year(year)
   inversion_data <- read_in_inversions(year)
   weather_data <- read_in_weather(year)
+  pollution_data <- read_in_pollution(year)
 
   # I assemble my main data file. The inversion data for a given year are my starting point, since they
   # constitute a nice balanced panel.
   mydata <- inversion_data %>%
     # First I merge in the weather data
     left_join(weather_data) %>%
+    # Then I merge in the pollution data
+    left_join(pollution_data) %>%
     # Then I merge in the OSHA accident data.
     left_join(osha_data) %>%
     # Replace NAs (days unrepresented in the OSHA data) with 0s, as they represent observations with no accident.

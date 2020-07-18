@@ -18,27 +18,27 @@ library(Matrix)
 library(sp)
 
 # Define input parameters
-pollution_data_dir <- 'D:/Pollution File for Matthew/Extracted'
+pollution_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Pollution Data'
 pollution_file <- function (year, month, day) return (paste0('PredictionStep2_PM25_USGrid_',
                                                              year, str_pad(month, 2, pad = '0'),
                                                              str_pad(day, 2, pad = '0'), '_',
                                                              year, str_pad(month, 2, pad = '0'),
                                                              str_pad(day, 2, pad = '0'), '.rds'))
 
-grid_data_dir <- 'D:/Pollution File for Matthew/Extracted'
+grid_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Pollution Data'
 grid_file <- function () return ('USGridSite.rds')
 
 # Define input parameters for the shapefile outlining the regions for which I want summarized data
-shapefile_dir <- 'D:/Pollution File for Matthew/County Shapefile'
+shapefile_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/County Shapefile'
 shapefile_file <- function () return('cb_2016_us_county_20m.shp')
 
 # Define output parameters
-output_dir <- 'D:/Pollution File for Matthew/Yearly Data'
+output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Pollution Data'
 output_file <- function (year) return (paste0('PM25_prediction_', year, '.csv'))
 
 # Define beginning and end years
-begin_year <- '2000'
-end_year <- '2015'
+begin_year <- 2000
+end_year <- 2015
 
 # Function to read in a single days worth of PM2.5 data
 read_in_day <- function (date) {
