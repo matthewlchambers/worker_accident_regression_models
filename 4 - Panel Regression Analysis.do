@@ -41,6 +41,10 @@ gen mean_pm25_log = log(mean_pm25)
 gen inversion_coverage_2 = inversion_coverage^2
 gen inversion_coverage_3 = inversion_coverage^3
 
+* Create weekday dummy variables, since ivreg2 can't handle factor variables
+tabulate weekday, generate(weekday_dummy_)
+drop weekday_dummy_1
+
 * Start esimating some models.
 xtivreg accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 = inversion_coverage), fe
 xtivreg accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 mean_pm25_2 = inversion_coverage inversion_coverage_2), fe
@@ -48,12 +52,12 @@ xtivreg accident_occurred mean_temperature mean_precipitation employment i.weekd
 xtivreg accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25_log = inversion_coverage), fe
 
 ********* Uncomment the lines below to do regressions on ACCRE.
-ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 = inversion_coverage), gmm2s dkraay(7)
-ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 = inversion_coverage), gmm2s bw(auto) cluster(date)
-ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 mean_pm25_2 = inversion_coverage inversion_coverage_2), gmm2s dkraay(7)
-ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 mean_pm25_2 = inversion_coverage inversion_coverage_2), gmm2s bw(auto) cluster(date)
-ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 mean_pm25_2 mean_pm25_3 = inversion_coverage inversion_coverage_2 inversion_coverage_3), gmm2s dkraay(7)
-ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 mean_pm25_2 mean_pm25_3 = inversion_coverage inversion_coverage_2 inversion_coverage_3), gmm2s bw(auto) cluster(date)
+ivreg2 accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), gmm2s dkraay(7)
+ivreg2 accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), gmm2s bw(auto) cluster(date)
+ivreg2 accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 mean_pm25_2 = inversion_coverage inversion_coverage_2), gmm2s dkraay(7)
+ivreg2 accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 mean_pm25_2 = inversion_coverage inversion_coverage_2), gmm2s bw(auto) cluster(date)
+ivreg2 accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 mean_pm25_2 mean_pm25_3 = inversion_coverage inversion_coverage_2 inversion_coverage_3), gmm2s dkraay(7)
+ivreg2 accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 mean_pm25_2 mean_pm25_3 = inversion_coverage inversion_coverage_2 inversion_coverage_3), gmm2s bw(auto) cluster(date)
 
 * Make some bins of exposure level, shock size, and inversions for looking at more complicated non-linearities.
 egen pm25_exposure_bin_labels = cut(mean_pm25), group(20)
@@ -70,9 +74,9 @@ tabulate pm25_shock_bin_labels, generate(pm25_shock_bin_)
 tabulate inversion_shock_bin_labels, generate(inversion_shock_bin_)
 
 * Do the regressions on binned variables.
-ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (pm25_exposure_bin_* = inversion_exposure_bin_*), gmm2s dkraay(7)
-ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (pm25_shock_bin_* = inversion_shock_bin_*), gmm2s dkraay(7)
-ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (pm25_exposure_bin_* pm_25_shock_bin_* = inversion_exposure_bin_* inversion_shock_bin_*), gmm2s dkraay(7)
+ivreg2 accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* = inversion_exposure_bin_*), gmm2s dkraay(7)
+ivreg2 accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_shock_bin_* = inversion_shock_bin_*), gmm2s dkraay(7)
+ivreg2 accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* pm_25_shock_bin_* = inversion_exposure_bin_* inversion_shock_bin_*), gmm2s dkraay(7)
 
 * Close the log
 log close main
