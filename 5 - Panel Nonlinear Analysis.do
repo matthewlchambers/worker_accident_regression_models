@@ -93,8 +93,8 @@ eststo, title("Cubic"): ivreghdfe accident_occurred mean_temperature mean_precip
 eststo, title("Linear-Log"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25_log = inversion_coverage), absorb(fips) cluster(fips) first
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-esttab using simple_nonlinear_regressions.tex, label replace booktabs alignment(D{.}{.}{-1}) title(Simple Nonlinear Regressions\label{tab1})
-esttab using simple_nonlinear_regressions.rtf, replace label nogap onecell
+esttab using simple_nonlinear_regressions.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Simple Nonlinear Regressions\label{tab1})
+esttab using simple_nonlinear_regressions.rtf, replace label mtitles nogap onecell
 eststo clear
 
 * Make some bins of exposure level, shock size, and inversions for looking at more complicated non-linearities.
@@ -103,22 +103,23 @@ egen inversion_exposure_bin_labels = cut(inversion_coverage), group(20)
 gen pm25_shock = mean_pm25 - L.mean_pm25
 gen inversion_shock = inversion_coverage - L.inversion_coverage
 egen pm25_shock_bin_labels = cut(pm25_shock), group(10)
-egen inversion_shock_bin_labels = cut(inversion_shock), group(10)
+egen inversion_shock_bin_labels = cut(inversion_shock), group(20)
 
 * Have to actually create dummy variables, since ivreg2 does not support factor variable operators.
 tabulate pm25_exposure_bin_labels, generate(pm25_exposure_bin_)
 tabulate inversion_exposure_bin_labels, generate(inversion_exposure_bin_)
 tabulate pm25_shock_bin_labels, generate(pm25_shock_bin_)
 tabulate inversion_shock_bin_labels, generate(inversion_shock_bin_)
+drop *_labels
 
 * Do the regressions on binned variables.
-eststo, title("Exposure Bins"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* = inversion_exposure_bin_*), absorb(fips month) cluster(fips) first
-eststo, title("Shock Bins"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_shock_bin_* = inversion_shock_bin_*), absorb(fips month) cluster(fips) first
-//eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* pm25_shock_bin_* = inversion_exposure_bin_* inversion_shock_bin_*), absorb(fips month) cluster(fips) first
+eststo, title("Exposure Bins"): reghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* = inversion_exposure_bin_*), absorb(fips month) cluster(fips) old
+eststo, title("Shock Bins"): reghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_shock_bin_* = inversion_shock_bin_*), absorb(fips month) cluster(fips) old
+eststo, title("Exposure and Shock Bins"): reghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* pm25_shock_bin_* = inversion_exposure_bin_* inversion_shock_bin_*), absorb(fips month) cluster(fips) old
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-esttab using binned_nonlinear_regressions.tex, label replace booktabs alignment(D{.}{.}{-1}) title(Binned Nonlinear Regressions\label{tab1})
-esttab using binned_nonlinear_regressions.rtf, replace label nogap onecell
+esttab using binned_nonlinear_regressions.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Binned Nonlinear Regressions\label{tab1})
+esttab using binned_nonlinear_regressions.rtf, replace label mtitles nogap onecell
 eststo clear
 
 *********** Below this line also applies to all regressions ********************

@@ -86,8 +86,8 @@ eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employme
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips month) cluster(fips date) first
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-esttab using fe_clustering_experiments.tex, label replace booktabs alignment(D{.}{.}{-1}) title(FE and Clustering Experiments\label{tab1})
-esttab using fe_clustering_experiments.rtf, replace label nogap onecell
+esttab using fe_clustering_experiments.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(FE and Clustering Experiments\label{tab1})
+esttab using fe_clustering_experiments.rtf, replace label mtitles nogap onecell
 eststo clear
 
 * Construct some alternate measures of PM 2.5, such as moving averages 
@@ -97,14 +97,19 @@ gen pm25_shock = mean_pm25 - L.mean_pm25
 gen ma_inversion_coverage = (L.inversion_coverage + inversion_coverage) / 2
 gen inversion_coverage_shock = inversion_coverage - L.inversion_coverage
 
+gen year = year(date)
+bysort fips year: egen annual_mean_pm25 = mean(mean_pm25)
+gen diff_from_annual_mean_pm25 = mean_pm25 - annual_mean_pm25
+
 * Do regressions using other PM 2.5 measures
 eststo, title("Exposure"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
 eststo, title("Shock"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_shock = inversion_coverage_shock), absorb(fips) cluster(fips) first
 eststo, title("2-Day Moving Average"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (ma_pm25 = ma_inversion_coverage), absorb(fips) cluster(fips) first
+eststo, title("Difference from Annual Mean"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (diff_from_annual_mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-esttab using exp_shock_ma_experiments.tex, label replace booktabs alignment(D{.}{.}{-1}) title(Exposure, Shock, and Moving Average Experiments\label{tab1})
-esttab using exp_shock_ma_experiments.rtf, replace label nogap onecell
+esttab using exp_shock_ma_experiments.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Exposure, Shock, and Moving Average Experiments\label{tab1})
+esttab using exp_shock_ma_experiments.rtf, replace label mtitles nogap onecell
 eststo clear
 
 * Close the log

@@ -84,13 +84,13 @@ forvalues i = 1/12 {
 	preserve
 	keep if month == `i'
 	eststo, title("Month `i' Cluster: County"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
-	eststo, title("Month `i' Cluster: County Date"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
+//	eststo, title("Month `i' Cluster: County Date"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
 	restore
 }
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-esttab using monthly_regressions.tex, label replace booktabs alignment(D{.}{.}{-1}) title(Monthly Regressions\label{tab1})
-esttab using monthly_regressions.rtf, replace label nogap onecell
+esttab using monthly_regressions.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly Regressions\label{tab1})
+esttab using monthly_regressions.rtf, replace label mtitles nogap onecell
 eststo clear
 
 *********** Below this line also applies to all regressions ********************
