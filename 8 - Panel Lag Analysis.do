@@ -38,7 +38,7 @@ net install ivreghdfe, from(https://raw.githubusercontent.com/sergiocorreia/ivre
 cd "E:/Research Projects/Worker Accidents and Pollution/Regression Models"
 
 * Start logging
-log using construction_monthly_analysis_log.log, replace name(main)
+log using construction_linear_analysis_log.log, replace name(main)
 
 * Import the clean data file, produced using R. I'm using Stata for the analysis.
 * because Stata works with panel data a little easier.
@@ -79,28 +79,17 @@ replace accident_occurred = 0 if accident_occurred == .
 
 ********* End basic fixes to data file, applicable to every regression *********
 
-// * Loop over months to explore heterogeneity in 
-// forvalues i = 1/12 {
-// 	preserve
-// 	keep if month == `i'
-// 	eststo, title("Month `i' Cluster: County"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
-// //	eststo, title("Month `i' Cluster: County Date"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
-// 	restore
-// }
-//
-// * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-// esttab using monthly_regressions.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly Regressions\label{tab1})
-// esttab using monthly_regressions.rtf, replace label mtitles nogap onecell
-// eststo clear
-
-eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (c.mean_pm25#i.month = c.inversion_coverage#i.month), absorb(fips) cluster(fips) first
+* Do a batch of simple linear iv regressions with different fixed effects and different clustering
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/1).mean_pm25 = L(0/1).inversion_coverage), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/3).mean_pm25 = L(0/3).inversion_coverage), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/5).mean_pm25 = L(0/5).inversion_coverage), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/7).mean_pm25 = L(0/7).inversion_coverage), absorb(fips) cluster(fips) first
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-esttab using monthly.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly\label{tab1})
-esttab using monthly.rtf, replace label mtitles nogap onecell
+esttab using lag_analysis.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Lag Analysis\label{tab1})
+esttab using lag_analysis.rtf, replace label mtitles nogap onecell
 eststo clear
-
-*********** Below this line also applies to all regressions ********************
 
 * Close the log
 log close main

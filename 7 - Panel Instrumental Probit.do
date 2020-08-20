@@ -38,7 +38,7 @@ net install ivreghdfe, from(https://raw.githubusercontent.com/sergiocorreia/ivre
 cd "E:/Research Projects/Worker Accidents and Pollution/Regression Models"
 
 * Start logging
-log using construction_monthly_analysis_log.log, replace name(main)
+log using construction_linear_analysis_log.log, replace name(main)
 
 * Import the clean data file, produced using R. I'm using Stata for the analysis.
 * because Stata works with panel data a little easier.
@@ -79,28 +79,33 @@ replace accident_occurred = 0 if accident_occurred == .
 
 ********* End basic fixes to data file, applicable to every regression *********
 
-// * Loop over months to explore heterogeneity in 
-// forvalues i = 1/12 {
-// 	preserve
-// 	keep if month == `i'
-// 	eststo, title("Month `i' Cluster: County"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
-// //	eststo, title("Month `i' Cluster: County Date"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
-// 	restore
-// }
-//
-// * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-// esttab using monthly_regressions.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly Regressions\label{tab1})
-// esttab using monthly_regressions.rtf, replace label mtitles nogap onecell
-// eststo clear
+* Construct some alternate measures of PM 2.5, such as moving averages 
+* and shocks, along with similar measures of inversions for instruments
+gen ma_pm25 = (L.mean_pm25 + mean_pm25) / 2
+gen pm25_shock = mean_pm25 - L.mean_pm25
+gen ma_inversion_coverage = (L.inversion_coverage + inversion_coverage) / 2
+gen inversion_coverage_shock = inversion_coverage - L.inversion_coverage
+gen L_mean_pm25 = L.mean_pm25
+gen L_inversion_coverage = L.inversion_coverage
 
-eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (c.mean_pm25#i.month = c.inversion_coverage#i.month), absorb(fips) cluster(fips) first
+gen year = year(date)
+bysort fips year: egen annual_mean_pm25 = mean(mean_pm25)
+gen diff_from_annual_mean_pm25 = mean_pm25 - annual_mean_pm25
+
+* Test out ivprobit and ivlogit
+eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), vce(cluster fips) first
+eststo: margins, dydx(mean_pm25) atmeans post
+eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L_mean_pm25 = L_inversion_coverage), vce(cluster fips) first
+eststo: margins, dydx(L_mean_pm25) atmeans post
+eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (ma_pm25 = ma_inversion_coverage), vce(cluster fips) first
+eststo: margins, dydx(ma_pm25) atmeans post
+eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_shock = inversion_coverage_shock), vce(cluster fips) first
+eststo: margins, dydx(pm25_shock) atmeans post
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-esttab using monthly.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly\label{tab1})
-esttab using monthly.rtf, replace label mtitles nogap onecell
+esttab using probit_models.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Probit Models\label{tab1})
+esttab using probit_models.rtf, replace label mtitles nogap onecell
 eststo clear
-
-*********** Below this line also applies to all regressions ********************
 
 * Close the log
 log close main
