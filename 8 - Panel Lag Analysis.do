@@ -79,7 +79,7 @@ replace accident_occurred = 0 if accident_occurred == .
 
 ********* End basic fixes to data file, applicable to every regression *********
 
-* Do a batch of simple linear iv regressions with different fixed effects and different clustering
+* Do a batch of simple linear iv regressions with different lag structures
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/1).mean_pm25 = L(0/1).inversion_coverage), absorb(fips) cluster(fips) first
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/3).mean_pm25 = L(0/3).inversion_coverage), absorb(fips) cluster(fips) first

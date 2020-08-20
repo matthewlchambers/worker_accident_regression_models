@@ -1,4 +1,4 @@
-* Start with a clean slate.
+ * Start with a clean slate.
 log close _all
 clear all
 

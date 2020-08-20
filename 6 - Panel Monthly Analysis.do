@@ -79,25 +79,25 @@ replace accident_occurred = 0 if accident_occurred == .
 
 ********* End basic fixes to data file, applicable to every regression *********
 
-// * Loop over months to explore heterogeneity in 
-// forvalues i = 1/12 {
-// 	preserve
-// 	keep if month == `i'
-// 	eststo, title("Month `i' Cluster: County"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
-// //	eststo, title("Month `i' Cluster: County Date"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
-// 	restore
-// }
-//
-// * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-// esttab using monthly_regressions.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly Regressions\label{tab1})
-// esttab using monthly_regressions.rtf, replace label mtitles nogap onecell
-// eststo clear
+* Loop over months to explore heterogeneity in 
+forvalues i = 1/12 {
+	preserve
+	keep if month == `i'
+	eststo, title("Month `i' Cluster: County"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
+//	eststo, title("Month `i' Cluster: County Date"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
+	restore
+}
+
+* Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
+esttab using monthly_regressions.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly Regressions\label{tab1})
+esttab using monthly_regressions.rtf, replace label mtitles nogap onecell
+eststo clear
 
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (c.mean_pm25#i.month = c.inversion_coverage#i.month), absorb(fips) cluster(fips) first
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-esttab using monthly.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly\label{tab1})
-esttab using monthly.rtf, replace label mtitles nogap onecell
+esttab using separate_months_one_regression.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Month Interactions\label{tab1})
+esttab using separate_months_one_regression.rtf, replace label mtitles nogap onecell
 eststo clear
 
 *********** Below this line also applies to all regressions ********************
