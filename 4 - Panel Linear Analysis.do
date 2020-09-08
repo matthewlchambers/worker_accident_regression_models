@@ -83,7 +83,8 @@ replace accident_occurred = 0 if accident_occurred == .
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips month) cluster(fips) first
-eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips month) cluster(fips date) first
+// This line and the one below it are the new ones as of 9-7-2020. Want to see what will happen if counties can have different first stage slopes.
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = i.fips#c.inversion_coverage), absorb(fips month) cluster(fips) first
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
 esttab using fe_clustering_experiments.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(FE and Clustering Experiments\label{tab1})

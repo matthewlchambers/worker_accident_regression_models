@@ -79,28 +79,32 @@ replace accident_occurred = 0 if accident_occurred == .
 
 ********* End basic fixes to data file, applicable to every regression *********
 
-* Construct some alternate measures of PM 2.5, such as moving averages 
-* and shocks, along with similar measures of inversions for instruments
-gen ma_pm25 = (L.mean_pm25 + mean_pm25) / 2
-gen pm25_shock = mean_pm25 - L.mean_pm25
-gen ma_inversion_coverage = (L.inversion_coverage + inversion_coverage) / 2
-gen inversion_coverage_shock = inversion_coverage - L.inversion_coverage
-gen L_mean_pm25 = L.mean_pm25
-gen L_inversion_coverage = L.inversion_coverage
+// * Construct some alternate measures of PM 2.5, such as moving averages 
+// * and shocks, along with similar measures of inversions for instruments
+// gen ma_pm25 = (L.mean_pm25 + mean_pm25) / 2
+// gen pm25_shock = mean_pm25 - L.mean_pm25
+// gen ma_inversion_coverage = (L.inversion_coverage + inversion_coverage) / 2
+// gen inversion_coverage_shock = inversion_coverage - L.inversion_coverage
+// gen L_mean_pm25 = L.mean_pm25
+// gen L_inversion_coverage = L.inversion_coverage
 
-gen year = year(date)
-bysort fips year: egen annual_mean_pm25 = mean(mean_pm25)
-gen diff_from_annual_mean_pm25 = mean_pm25 - annual_mean_pm25
+// gen year = year(date)
+// bysort fips year: egen annual_mean_pm25 = mean(mean_pm25)
+// gen diff_from_annual_mean_pm25 = mean_pm25 - annual_mean_pm25
 
-* Test out ivprobit and ivlogit
-eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), vce(cluster fips) first
-eststo: margins, dydx(mean_pm25) atmeans post
-eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L_mean_pm25 = L_inversion_coverage), vce(cluster fips) first
-eststo: margins, dydx(L_mean_pm25) atmeans post
-eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (ma_pm25 = ma_inversion_coverage), vce(cluster fips) first
-eststo: margins, dydx(ma_pm25) atmeans post
-eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_shock = inversion_coverage_shock), vce(cluster fips) first
-eststo: margins, dydx(pm25_shock) atmeans post
+* Test out ivprobit. See https://www.statalist.org/forums/forum/general-stata-discussion/general/1305265-instrumental-variable-probit-using-panel-data
+* for Jeff Wooldridge saying that clustering on the panel identifier allows for
+* valid inference with panel data using ivprobit. It is a correlated random
+* effects approach rather than fixed effects, because unconditional fixed 
+* effects estimates are biased.
+eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 = inversion_coverage), vce(cluster fips) first
+eststo: margins, dydx(_all) predict(pr)
+
+preserve
+drop if weekday < 2 | weekday > 6
+eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment (mean_pm25 = inversion_coverage), vce(cluster fips) first
+eststo: margins, dydx(_all) predict(pr)
+restore
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
 esttab using probit_models.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Probit Models\label{tab1})

@@ -38,7 +38,7 @@ net install ivreghdfe, from(https://raw.githubusercontent.com/sergiocorreia/ivre
 cd "E:/Research Projects/Worker Accidents and Pollution/Regression Models"
 
 * Start logging
-log using construction_linear_analysis_log.log, replace name(main)
+log using lag_analysis.log, replace name(main)
 
 * Import the clean data file, produced using R. I'm using Stata for the analysis.
 * because Stata works with panel data a little easier.
@@ -82,13 +82,43 @@ replace accident_occurred = 0 if accident_occurred == .
 * Do a batch of simple linear iv regressions with different lag structures
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/1).mean_pm25 = L(0/1).inversion_coverage), absorb(fips) cluster(fips) first
+eststo: testparm L(0/1).mean_pm25
 eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/3).mean_pm25 = L(0/3).inversion_coverage), absorb(fips) cluster(fips) first
-eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/5).mean_pm25 = L(0/5).inversion_coverage), absorb(fips) cluster(fips) first
-eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (L(0/7).mean_pm25 = L(0/7).inversion_coverage), absorb(fips) cluster(fips) first
+eststo: testparm L(0/3).mean_pm25
+eststo: testparm L(1/3).mean_pm25
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
-esttab using lag_analysis.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Lag Analysis\label{tab1})
-esttab using lag_analysis.rtf, replace label mtitles nogap onecell
+esttab using unconstrained_distributed_lag.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Lag Analysis\label{tab1})
+esttab using unconstrained_distributed_lag.rtf, replace label mtitles nogap onecell
+eststo clear
+
+* Check each of several lags, included with the contemporaneous effect but 
+* no intervening lags, to  try and get a picture of how effects change over time
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 L.mean_pm25 = inversion_coverage L.inversion_coverage), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 L3.mean_pm25 = inversion_coverage L3.inversion_coverage), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 L5.mean_pm25 = inversion_coverage L5.inversion_coverage), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 L7.mean_pm25 = inversion_coverage L7.inversion_coverage), absorb(fips) cluster(fips) first
+
+* Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
+esttab using individual_lags.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Lag Analysis\label{tab1})
+esttab using individual_lags.rtf, replace label mtitles nogap onecell
+eststo clear
+
+* Use Wooldridge p.326 to estimate long-run effect with standard error.
+forvalues i = 1/4 {
+	 gen pm25_diff_`i' = L`i'.mean_pm25 - mean_pm25
+	 gen inversion_diff_`i' = L`i'.inversion_coverage - inversion_coverage
+}
+
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 pm25_diff_1 = inversion_coverage inversion_diff_1), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 pm25_diff_1 pm25_diff_2 = inversion_coverage inversion_diff_1 inversion_diff_2), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 pm25_diff_1 pm25_diff_2 pm25_diff_3 = inversion_coverage inversion_diff_1 inversion_diff_2 inversion_diff_3), absorb(fips) cluster(fips) first
+eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 pm25_diff_1 pm25_diff_2 pm25_diff_3 pm25_diff_4 = inversion_coverage inversion_diff_1 inversion_diff_2 inversion_diff_3 inversion_diff_4), absorb(fips) cluster(fips) first
+
+* Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
+esttab using long_run_effect.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Lag Analysis\label{tab1})
+esttab using long_run_effect.rtf, replace label mtitles nogap onecell
 eststo clear
 
 * Close the log

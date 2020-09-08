@@ -1,0 +1,358 @@
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\nighttime_linear_analysis.log
+  log type:  text
+ opened on:   8 Sep 2020, 09:41:44
+
+. 
+. * Import the clean data file, produced using R. I'm using Stata for the analysis.
+. * because Stata works with panel data a little easier.
+. import delimited "../Data/Data for Regression Models/Nighttime Inversions/construction_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+(12 vars, 15,288,560 obs)
+
+. 
+. * Take a smaller sample for local code testing
+. keep if strpos(date, "2005")
+(14,113,260 observations deleted)
+
+. 
+. ********* End of section to change when switching between local and ACCRE ******
+. 
+. ********* Basic fixes to data file, applicable to every regression *************
+. 
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+
+. drop date
+
+. rename temporary_date date
+
+. format date %td
+
+. 
+. * Create a month variable so I can absorb month-of-year fixed effects
+. gen month = month(date)
+
+. 
+. * Create weekday dummy variables, since ivreg2 can't handle factor variables
+. tabulate weekday, generate(weekday_dummy_)
+
+    weekday |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |    167,440       14.25       14.25
+          2 |    167,440       14.25       28.49
+          3 |    167,440       14.25       42.74
+          4 |    167,440       14.25       56.99
+          5 |    167,440       14.25       71.23
+          6 |    167,440       14.25       85.48
+          7 |    170,660       14.52      100.00
+------------+-----------------------------------
+      Total |  1,175,300      100.00
+
+. drop weekday_dummy_1
+
+. 
+. * Destring mean_pm25 because somehow it imported as a date.
+. destring mean_pm25, force replace
+mean_pm25 already numeric; no replace
+
+. 
+. * Drop any observations from Alaska, Hawaii, or Puerto Rico.
+. drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72
+(40,880 observations deleted)
+
+. 
+. * Declare the data as panel data.
+. xtset fips date
+       panel variable:  fips (strongly balanced)
+        time variable:  date, 01jan2005 to 31dec2005
+                delta:  1 day
+
+. 
+. * Make a binary for an accident occurring.
+. gen accident_occurred = 1 if num_accidents > 0
+(1,132,861 missing values generated)
+
+. replace accident_occurred = 0 if accident_occurred == .
+(1,132,861 real changes made)
+
+. 
+. ********* End basic fixes to data file, applicable to every regression *********
+. 
+. rename inversion_coverage nighttime_inversion_coverage
+
+. 
+. keep fips date nighttime_inversion_coverage
+
+. 
+. save nighttime_temporary, replace
+file nighttime_temporary.dta saved
+
+. clear
+
+. 
+. * Import the file with all inversions
+. import delimited "../Data/Data for Regression Models/construction_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+(12 vars, 15,288,560 obs)
+
+. 
+. ************* Redo the basic fixes to the all inversion file *******************
+. 
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+
+. drop date
+
+. rename temporary_date date
+
+. format date %td
+
+. 
+. * Create a month variable so I can absorb month-of-year fixed effects
+. gen month = month(date)
+
+. 
+. * Create weekday dummy variables, since ivreg2 can't handle factor variables
+. tabulate weekday, generate(weekday_dummy_)
+
+    weekday |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |  2,183,160       14.28       14.28
+          2 |  2,183,160       14.28       28.56
+          3 |  2,183,160       14.28       42.84
+          4 |  2,186,380       14.30       57.14
+          5 |  2,186,380       14.30       71.44
+          6 |  2,183,160       14.28       85.72
+          7 |  2,183,160       14.28      100.00
+------------+-----------------------------------
+      Total | 15,288,560      100.00
+
+. drop weekday_dummy_1
+
+. 
+. * Destring mean_pm25 because somehow it imported as a date.
+. destring mean_pm25, force replace
+mean_pm25 already numeric; no replace
+
+. 
+. * Drop any observations from Alaska, Hawaii, or Puerto Rico.
+. drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72
+(531,776 observations deleted)
+
+. 
+. * Declare the data as panel data.
+. xtset fips date
+       panel variable:  fips (strongly balanced)
+        time variable:  date, 01jan2003 to 31dec2015
+                delta:  1 day
+
+. 
+. * Make a binary for an accident occurring.
+. gen accident_occurred = 1 if num_accidents > 0
+(14,741,796 missing values generated)
+
+. replace accident_occurred = 0 if accident_occurred == .
+(14,741,796 real changes made)
+
+. 
+. ******************** End basic fixes to all inversion file *********************
+. 
+. * merge in the nighttime inversion data, then delete that temporary file
+. merge 1:1 fips date using nighttime_temporary, keep(match)
+
+    Result                           # of obs.
+    -----------------------------------------
+    not matched                             0
+    matched                         1,134,420  (_merge==3)
+    -----------------------------------------
+
+. erase nighttime_temporary.dta
+
+. 
+. * inversion coverage = 0.375 * nighttime_inversion_coverage + 0.625 * daytime_inversion_coverage
+. * since "nighttime" is hours 0000, 0300, and 0600, with "daytime" being the rest.
+. gen daytime_inversion_coverage = 1.6 * (inversion_coverage - (0.375 * nighttime_inversion_coverage))
+
+. 
+. * Use days when there is "high" inversion coverage at night and "low" inversion coverage during the day
+. * as an instrument for PM 2.5 that shouldn't be causing significant 
+. gen nighttime_only = 1 if nighttime_inversion_coverage > 0.75 & daytime_inversion_coverage < 0.25
+(1,104,683 missing values generated)
+
+. replace nighttime_only = 0 if nighttime_only == .
+(1,104,683 real changes made)
+
+. 
+. * Do regressions using other PM 2.5 measures
+. eststo, title(".25-.75"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = nighttime_only), absorb(fips) cluster
+> (fips) first
+(MWFE estimator converged in 1 iterations)
+
+First-stage regressions
+-----------------------
+
+
+First-stage regression of mean_pm25:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+------------------------------------------------------------------------------------
+                   |               Robust
+         mean_pm25 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+    nighttime_only |   .6017418   .0391774    15.36   0.000     .5249554    .6785281
+  mean_temperature |   .1841228   .0029321    62.79   0.000     .1783759    .1898697
+mean_precipitation |  -.1903764   .0016169  -117.74   0.000    -.1935456   -.1872073
+        employment |  -.0004868   .0001014    -4.80   0.000    -.0006856    -.000288
+   weekday_dummy_2 |  -.1706919   .0084969   -20.09   0.000    -.1873456   -.1540383
+   weekday_dummy_3 |  -.2086727   .0084159   -24.80   0.000    -.2251675   -.1921779
+   weekday_dummy_4 |  -.1158101   .0146899    -7.88   0.000    -.1446018   -.0870184
+   weekday_dummy_5 |  -.2713111   .0169867   -15.97   0.000    -.3046045   -.2380178
+   weekday_dummy_6 |  -.0641832   .0175198    -3.66   0.000    -.0985215   -.0298449
+   weekday_dummy_7 |   .2185502   .0131201    16.66   0.000     .1928354    .2442651
+------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  1,  3100) =   235.91
+  Prob > F      =   0.0000
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =   235.91
+  Prob > F      =   0.0000
+
+
+
+Summary results for first-stage regressions
+-------------------------------------------
+
+                                           (Underid)            (Weak id)
+Variable     | F(  1,  3100)  P-val | SW Chi-sq(  1) P-val | SW F(  1,  3100)
+mean_pm25    |     235.91    0.0000 |      235.99   0.0000 |      235.91
+
+NB: first-stage test statistics cluster-robust
+
+Stock-Yogo weak ID F test critical values for single endogenous regressor:
+                                   10% maximal IV size             16.38
+                                   15% maximal IV size              8.96
+                                   20% maximal IV size              6.66
+                                   25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for i.i.d. errors only.
+
+Underidentification test
+Ho: matrix of reduced form coefficients has rank=K1-1 (underidentified)
+Ha: matrix has rank=K1 (identified)
+Kleibergen-Paap rk LM statistic          Chi-sq(1)=211.33   P-val=0.0000
+
+Weak identification test
+Ho: equation is weakly identified
+Cragg-Donald Wald F statistic                                     290.71
+Kleibergen-Paap Wald rk F statistic                               235.91
+
+Stock-Yogo weak ID test critical values for K1=1 and L1=1:
+                                   10% maximal IV size             16.38
+                                   15% maximal IV size              8.96
+                                   20% maximal IV size              6.66
+                                   25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
+
+Weak-instrument-robust inference
+Tests of joint significance of endogenous regressors B1 in main equation
+Ho: B1=0 and orthogonality conditions are valid
+Anderson-Rubin Wald test           F(1,3100)=      4.36     P-val=0.0369
+Anderson-Rubin Wald test           Chi-sq(1)=      4.36     P-val=0.0368
+Stock-Wright LM S statistic        Chi-sq(1)=      4.67     P-val=0.0307
+
+NB: Underidentification, weak identification and weak-identification-robust
+    test statistics cluster-robust
+
+Number of clusters             N_clust  =       3101
+Number of observations               N  =    1131865
+Number of regressors                 K  =         10
+Number of endogenous regressors      K1 =          1
+Number of instruments                L  =         10
+Number of excluded instruments       L1 =          1
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on fips
+
+Number of clusters (fips) =       3101                Number of obs =  1131865
+                                                      F( 10,  3100) =    11.13
+                                                      Prob > F      =   0.0000
+Total (centered) SS     =   1483.00274                Centered R2   =  -0.0184
+Total (uncentered) SS   =   1483.00274                Uncentered R2 =  -0.0184
+Residual SS             =  1510.266014                Root MSE      =   .03653
+
+------------------------------------------------------------------------------------
+                   |               Robust
+ accident_occurred |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+         mean_pm25 |   .0008412   .0004073     2.07   0.039     .0000426    .0016399
+  mean_temperature |  -.0001424   .0000753    -1.89   0.059      -.00029    5.24e-06
+mean_precipitation |   .0001398   .0000772     1.81   0.070    -.0000116    .0002912
+        employment |   9.14e-07   6.11e-07     1.50   0.135    -2.84e-07    2.11e-06
+   weekday_dummy_2 |   .0016271   .0001975     8.24   0.000     .0012399    .0020143
+   weekday_dummy_3 |   .0018472   .0002083     8.87   0.000     .0014388    .0022555
+   weekday_dummy_4 |    .001834   .0002039     8.99   0.000     .0014341    .0022339
+   weekday_dummy_5 |   .0019068   .0002175     8.77   0.000     .0014803    .0023332
+   weekday_dummy_6 |   .0015893   .0001771     8.97   0.000     .0012421    .0019366
+   weekday_dummy_7 |   .0002732   .0001184     2.31   0.021     .0000412    .0005053
+------------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):            211.327
+                                                   Chi-sq(1) P-val =    0.0000
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):              290.714
+                         (Kleibergen-Paap rk Wald F statistic):        235.912
+Stock-Yogo weak ID test critical values: 10% maximal IV size             16.38
+                                         15% maximal IV size              8.96
+                                         20% maximal IV size              6.66
+                                         25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
+------------------------------------------------------------------------------
+Hansen J statistic (overidentification test of all instruments):         0.000
+                                                 (equation exactly identified)
+------------------------------------------------------------------------------
+Instrumented:         mean_pm25
+Included instruments: mean_temperature mean_precipitation employment
+                      weekday_dummy_2 weekday_dummy_3 weekday_dummy_4
+                      weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
+Excluded instruments: nighttime_only
+Partialled-out:       _cons
+                      nb: total SS, model F and R2s are after partialling-out;
+                          any small-sample adjustments include partialled-out
+                          variables in regressor count K
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+        fips |      3101        3101           0    *|
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+(est1 stored)
+
+. 
+. * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
+. esttab using nighttime_linear_analysis.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Exposure, Shock, and Moving Average Experiments\label{tab1})
+(note: file nighttime_linear_analysis.tex not found)
+(output written to nighttime_linear_analysis.tex)
+
+. esttab using nighttime_linear_analysis.rtf, replace label mtitles nogap onecell
+(note: file nighttime_linear_analysis.rtf not found)
+(output written to nighttime_linear_analysis.rtf)
+
+. eststo clear
+
+. 
+. * Close the log
+. log close main
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\nighttime_linear_analysis.log
+  log type:  text
+ closed on:   8 Sep 2020, 09:53:27
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
