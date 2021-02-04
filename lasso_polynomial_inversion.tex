@@ -1,0 +1,44 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{LASSO Polynomial Inversion\label{tab1}}
+\begin{tabular}{l*{1}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}\\
+                    &\multicolumn{1}{c}{est1}\\
+\midrule
+mean\_pm25           &   0.0000303         \\
+                    &      (0.22)         \\
+\addlinespace
+mean\_temperature    &  0.00000673         \\
+                    &      (0.25)         \\
+\addlinespace
+mean\_precipitation  &  -0.0000144         \\
+                    &     (-0.53)         \\
+\addlinespace
+employment          & 0.000000518         \\
+                    &      (0.93)         \\
+\addlinespace
+weekday==     2.0000&     0.00149\sym{***}\\
+                    &      (7.74)         \\
+\addlinespace
+weekday==     3.0000&     0.00168\sym{***}\\
+                    &      (8.76)         \\
+\addlinespace
+weekday==     4.0000&     0.00174\sym{***}\\
+                    &      (8.80)         \\
+\addlinespace
+weekday==     5.0000&     0.00169\sym{***}\\
+                    &      (9.37)         \\
+\addlinespace
+weekday==     6.0000&     0.00154\sym{***}\\
+                    &      (8.93)         \\
+\addlinespace
+weekday==     7.0000&    0.000447\sym{***}\\
+                    &      (5.29)         \\
+\midrule
+Observations        &     1131865         \\
+\bottomrule
+\multicolumn{2}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{2}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}

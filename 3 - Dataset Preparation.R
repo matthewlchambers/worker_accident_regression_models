@@ -26,7 +26,7 @@ qcew_file <- function (year) return (paste0(year, '.q1-q4.singlefile.csv'))
 inversion_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Inversion data'
 # Uncomment the line below (and one under output_dir, below, after running script number 11 to create a data file
 # that uses nighttime inversions only (as a robustness check)
-inversion_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Inversion data/Nighttime Inversions'
+#inversion_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Inversion data/Nighttime Inversions'
 inversion_file <- function (year) return (paste0('inversions_', year, '.csv'))
 
 weather_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Weather Data'
@@ -38,7 +38,7 @@ pollution_file <- function (year) return (paste0('PM25_prediction_', year, '.csv
 # Define output parameters for the cleaned data file(s) to be saved.
 output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Data for Regression Models'
 # Uncomment the line below to send output to a directory set up for nighttime inversion data (as a robustness check)
-output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Data for Regression Models/Nighttime Inversions'
+#output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Data for Regression Models/Nighttime Inversions'
 output_file <- function (type = NULL) return(paste0('construction_accidents_', type, '.csv'))
 
 # Define functions to read in the different types of files, incorporating whatever tweaks need to be made

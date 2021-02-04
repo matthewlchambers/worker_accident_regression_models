@@ -1,0 +1,210 @@
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\iv_lasso.log
+  log type:  text
+ opened on:   1 Oct 2020, 10:22:34
+
+. 
+. * Import the clean data file, produced using R. I'm using Stata for the analysis.
+. * because Stata works with panel data a little easier.
+. import delimited "../Data/Data for Regression Models/construction_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+(12 vars, 15,288,560 obs)
+
+. 
+. * Take a smaller sample for local code testing
+. keep if strpos(date, "2005")
+(14,113,260 observations deleted)
+
+. 
+. ********* End of section to change when switching between local and ACCRE ******
+. 
+. ********* Basic fixes to data file, applicable to every regression *************
+. 
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+
+. drop date
+
+. rename temporary_date date
+
+. format date %td
+
+. 
+. * Create a month variable so I can absorb month-of-year fixed effects
+. gen month = month(date)
+
+. 
+. * Create weekday dummy variables, since ivreg2 can't handle factor variables
+. tabulate weekday, generate(weekday_dummy_)
+
+    weekday |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |    167,440       14.25       14.25
+          2 |    167,440       14.25       28.49
+          3 |    167,440       14.25       42.74
+          4 |    167,440       14.25       56.99
+          5 |    167,440       14.25       71.23
+          6 |    167,440       14.25       85.48
+          7 |    170,660       14.52      100.00
+------------+-----------------------------------
+      Total |  1,175,300      100.00
+
+. drop weekday_dummy_1
+
+. 
+. * Destring mean_pm25 because somehow it imported as a date.
+. destring mean_pm25, force replace
+mean_pm25 already numeric; no replace
+
+. 
+. * Drop any observations from Alaska, Hawaii, or Puerto Rico.
+. drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72
+(40,880 observations deleted)
+
+. 
+. * Declare the data as panel data.
+. xtset fips date
+       panel variable:  fips (strongly balanced)
+        time variable:  date, 01jan2005 to 31dec2005
+                delta:  1 day
+
+. 
+. * Make a binary for an accident occurring.
+. gen accident_occurred = 1 if num_accidents > 0
+(1,132,861 missing values generated)
+
+. replace accident_occurred = 0 if accident_occurred == .
+(1,132,861 real changes made)
+
+. 
+. ********* End basic fixes to data file, applicable to every regression *********
+. 
+. * Generate powers of inversion coverage as separate variables so that I can prevent
+. * ivlasso from dropping them and then refusing to estimate the equation
+. forvalues i = 1/7 {
+  2.         gen inversion_coverage_`i' = inversion_coverage^`i'
+  3. }
+
+. 
+. eststo: ivlasso accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage_*), cluster(fips) fe first
+Fixed effects transformation...
+5.  (PDS/CHS) Selecting HD controls/IVs for endog regressor mean_pm25...
+Selected: inversion_coverage_1 inversion_coverage_7
+7.  (CHS) Creating orthogonalized endogenous regressor mean_pm25...
+
+
+Estimation results:
+
+Specification:
+Regularization method:                 lasso
+Penalty loadings:                      cluster-lasso
+Number of observations:                1,131,865
+Number of clusters:                        3,101
+Number of fixed effects:                   3,101
+Exogenous (9):                         mean_temperature mean_precipitation employment weekday_dummy_2 weekday_dummy_3 weekday_dummy_4 weekday_dummy_5 weekday_dummy_6
+                                       weekday_dummy_7
+Endogenous (1):                        mean_pm25
+High-dim instruments (7):              inversion_coverage_1 inversion_coverage_2 inversion_coverage_3 inversion_coverage_4 inversion_coverage_5 inversion_coverage_6
+                                       inversion_coverage_7
+Selected instruments (2):              inversion_coverage_1 inversion_coverage_7
+
+First-stage estimation(s):
+(Std. Err. adjusted for 3101 clusters in fips)
+                                       (Std. Err. adjusted for 3,101 clusters in fips)
+--------------------------------------------------------------------------------------
+                     |               Robust
+           mean_pm25 |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+---------------------+----------------------------------------------------------------
+    mean_temperature |   .1833011   .0028843    63.55   0.000     .1776479    .1889543
+  mean_precipitation |  -.1904518   .0016152  -117.91   0.000    -.1936175   -.1872861
+          employment |   -.000483   .0001004    -4.81   0.000    -.0006798   -.0002863
+     weekday_dummy_2 |  -.1681005   .0084992   -19.78   0.000    -.1847586   -.1514424
+     weekday_dummy_3 |  -.2046013   .0084744   -24.14   0.000    -.2212108   -.1879918
+     weekday_dummy_4 |  -.1135108   .0148954    -7.62   0.000    -.1427052   -.0843164
+     weekday_dummy_5 |  -.2602701   .0169336   -15.37   0.000    -.2934595   -.2270808
+     weekday_dummy_6 |  -.0513523   .0172674    -2.97   0.003    -.0851957   -.0175088
+     weekday_dummy_7 |    .215943   .0132212    16.33   0.000     .1900298    .2418561
+inversion_coverage_1 |   .5416498   .0492971    10.99   0.000     .4450293    .6382703
+inversion_coverage_7 |   .2980248   .0540595     5.51   0.000     .1920702    .4039794
+--------------------------------------------------------------------------------------
+
+Structural equation (fixed effects, #groups=3101):
+
+IV using CHS lasso-orthogonalized vars
+(Std. Err. adjusted for 3101 clusters in fips)
+------------------------------------------------------------------------------------
+                   |               Robust
+ accident_occurred |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+         mean_pm25 |   .0000545   .0001537     0.35   0.723    -.0002468    .0003557
+  mean_temperature |   2.28e-06   .0000287     0.08   0.937    -.0000539    .0000585
+mean_precipitation |  -9.78e-06   .0000297    -0.33   0.742    -.0000679    .0000484
+        employment |   5.30e-07   5.55e-07     0.95   0.340    -5.58e-07    1.62e-06
+   weekday_dummy_2 |   .0014907   .0001913     7.79   0.000     .0011157    .0018657
+   weekday_dummy_3 |   .0016832   .0001919     8.77   0.000     .0013071    .0020593
+   weekday_dummy_4 |   .0017412   .0001975     8.82   0.000     .0013541    .0021284
+   weekday_dummy_5 |   .0016933   .0001815     9.33   0.000     .0013376    .0020489
+   weekday_dummy_6 |   .0015375   .0001719     8.94   0.000     .0012006    .0018744
+   weekday_dummy_7 |   .0004421   .0000871     5.08   0.000     .0002714    .0006128
+------------------------------------------------------------------------------------
+
+IV using CHS post-lasso-orthogonalized vars
+(Std. Err. adjusted for 3101 clusters in fips)
+------------------------------------------------------------------------------------
+                   |               Robust
+ accident_occurred |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+         mean_pm25 |   .0000509   .0001495     0.34   0.734    -.0002422     .000344
+  mean_temperature |   2.94e-06    .000028     0.11   0.916    -.0000518    .0000577
+mean_precipitation |  -.0000105   .0000289    -0.36   0.717    -.0000671    .0000462
+        employment |   5.28e-07   5.55e-07     0.95   0.342    -5.60e-07    1.62e-06
+   weekday_dummy_2 |   .0014901   .0001914     7.79   0.000      .001115    .0018651
+   weekday_dummy_3 |   .0016824   .0001918     8.77   0.000     .0013066    .0020583
+   weekday_dummy_4 |   .0017408   .0001975     8.81   0.000     .0013537    .0021279
+   weekday_dummy_5 |   .0016923   .0001811     9.34   0.000     .0013373    .0020472
+   weekday_dummy_6 |   .0015373   .0001719     8.94   0.000     .0012003    .0018742
+   weekday_dummy_7 |   .0004429   .0000865     5.12   0.000     .0002733    .0006125
+------------------------------------------------------------------------------------
+
+IV with PDS-selected variables and full regressor set
+(Std. Err. adjusted for 3101 clusters in fips)
+------------------------------------------------------------------------------------
+                   |               Robust
+ accident_occurred |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+         mean_pm25 |   .0000303   .0001405     0.22   0.829    -.0002451    .0003057
+  mean_temperature |   6.73e-06   .0000264     0.25   0.799     -.000045    .0000585
+mean_precipitation |  -.0000144   .0000273    -0.53   0.598    -.0000678     .000039
+        employment |   5.18e-07   5.57e-07     0.93   0.353    -5.74e-07    1.61e-06
+   weekday_dummy_2 |   .0014865    .000192     7.74   0.000     .0011101    .0018629
+   weekday_dummy_3 |   .0016781   .0001916     8.76   0.000     .0013026    .0020537
+   weekday_dummy_4 |   .0017384   .0001976     8.80   0.000     .0013511    .0021257
+   weekday_dummy_5 |   .0016867     .00018     9.37   0.000      .001334    .0020394
+   weekday_dummy_6 |   .0015359   .0001721     8.93   0.000     .0011986    .0018732
+   weekday_dummy_7 |   .0004473   .0000846     5.29   0.000     .0002814    .0006132
+------------------------------------------------------------------------------------
+Standard errors and test statistics valid for the following variables only:
+    mean_pm25 mean_temperature mean_precipitation employment weekday_dummy_2 weekday_dummy_3 weekday_dummy_4 weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
+------------------------------------------------------------------------------
+(est1 stored)
+
+. 
+. * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
+. esttab using lasso_polynomial_inversion.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(LASSO Polynomial Inversion\label{tab1})
+(note: file lasso_polynomial_inversion.tex not found)
+(output written to lasso_polynomial_inversion.tex)
+
+. esttab using lasso_polynomial_inversion.rtf, replace label mtitles nogap onecell
+(note: file lasso_polynomial_inversion.rtf not found)
+(output written to lasso_polynomial_inversion.rtf)
+
+. eststo clear
+
+. 
+. * Close the log
+. log close main
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\iv_lasso.log
+  log type:  text
+ closed on:   1 Oct 2020, 10:26:46
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------

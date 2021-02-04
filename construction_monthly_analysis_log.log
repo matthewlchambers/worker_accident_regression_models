@@ -1,0 +1,315 @@
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\construction_monthly_analysis_log.log
+  log type:  text
+ opened on:  19 Aug 2020, 16:54:09
+
+. 
+. * Import the clean data file, produced using R. I'm using Stata for the analysis.
+. * because Stata works with panel data a little easier.
+. import delimited "../Data/Data for Regression Models/construction_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+(12 vars, 15,288,560 obs)
+
+. 
+. * Take a smaller sample for local code testing
+. keep if strpos(date, "2005")
+(14,113,260 observations deleted)
+
+. 
+. ********* End of section to change when switching between local and ACCRE ******
+. 
+. ********* Basic fixes to data file, applicable to every regression *************
+. 
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+
+. drop date
+
+. rename temporary_date date
+
+. format date %td
+
+. 
+. * Create a month variable so I can absorb month-of-year fixed effects
+. gen month = month(date)
+
+. 
+. * Create weekday dummy variables, since ivreg2 can't handle factor variables
+. tabulate weekday, generate(weekday_dummy_)
+
+    weekday |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |    167,440       14.25       14.25
+          2 |    167,440       14.25       28.49
+          3 |    167,440       14.25       42.74
+          4 |    167,440       14.25       56.99
+          5 |    167,440       14.25       71.23
+          6 |    167,440       14.25       85.48
+          7 |    170,660       14.52      100.00
+------------+-----------------------------------
+      Total |  1,175,300      100.00
+
+. drop weekday_dummy_1
+
+. 
+. * Destring mean_pm25 because somehow it imported as a date.
+. destring mean_pm25, force replace
+mean_pm25 already numeric; no replace
+
+. 
+. * Drop any observations from Alaska, Hawaii, or Puerto Rico.
+. drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72
+(40,880 observations deleted)
+
+. 
+. * Declare the data as panel data.
+. xtset fips date
+       panel variable:  fips (strongly balanced)
+        time variable:  date, 01jan2005 to 31dec2005
+                delta:  1 day
+
+. 
+. * Make a binary for an accident occurring.
+. gen accident_occurred = 1 if num_accidents > 0
+(1,132,861 missing values generated)
+
+. replace accident_occurred = 0 if accident_occurred == .
+(1,132,861 real changes made)
+
+. 
+. ********* End basic fixes to data file, applicable to every regression *********
+. 
+. // * Loop over months to explore heterogeneity in 
+. // forvalues i = 1/12 {
+. //      preserve
+. //      keep if month == `i'
+. //      eststo, title("Month `i' Cluster: County"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_c
+> overage), absorb(fips) cluster(fips) first
+. // //   eststo, title("Month `i' Cluster: County Date"): ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = invers
+> ion_coverage), absorb(fips) cluster(fips date) first
+. //      restore
+. // }
+. //
+. // * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
+. // esttab using monthly_regressions.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly Regressions\label{tab1})
+. // esttab using monthly_regressions.rtf, replace label mtitles nogap onecell
+. // eststo clear
+. 
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (c.mean_pm25#i.month = c.inversion_coverage#i.month), absorb(fips) c
+> luster(fips) first
+(MWFE estimator converged in 1 iterations)
+
+Unable to store first-stage regression of 1b.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 2.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 3.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 4.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 5.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 6.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 7.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 8.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 9.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 10.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 11.month#c.mean_pm25.
+
+
+Unable to store first-stage regression of 12.month#c.mean_pm25.
+
+
+First-stage regressions
+-----------------------
+
+Unable to display all first-stage regressions.
+There may be insufficient room to store results using -estimates store-,
+or names of endogenous regressors may be too long to store the results.
+Try dropping one or more estimation results using -estimates drop-,
+using the -savefprefix- option, or using shorter variable names.
+
+
+
+Summary results for first-stage regressions
+-------------------------------------------
+
+                                           (Underid)            (Weak id)
+Variable     | F( 12,  3100)  P-val | SW Chi-sq(  1) P-val | SW F(  1,  3100)
+1b.month#c.m |    3056.04    0.0000 |      177.60   0.0000 |      177.54
+2.month#c.me |    2479.24    0.0000 |      175.43   0.0000 |      175.37
+3.month#c.me |    3376.06    0.0000 |      183.33   0.0000 |      183.26
+4.month#c.me |    5651.06    0.0000 |      175.55   0.0000 |      175.49
+5.month#c.me |    3413.10    0.0000 |      174.41   0.0000 |      174.35
+6.month#c.me |    4352.50    0.0000 |      171.32   0.0000 |      171.27
+7.month#c.me |    4906.24    0.0000 |      170.91   0.0000 |      170.85
+8.month#c.me |    3659.84    0.0000 |      169.55   0.0000 |      169.49
+9.month#c.me |    3020.51    0.0000 |      173.62   0.0000 |      173.56
+10.month#c.m |    3378.22    0.0000 |      172.02   0.0000 |      171.96
+11.month#c.m |    3085.11    0.0000 |      187.21   0.0000 |      187.14
+12.month#c.m |    2571.79    0.0000 |      173.44   0.0000 |      173.39
+
+NB: first-stage test statistics cluster-robust
+
+Stock-Yogo weak ID F test critical values for single endogenous regressor:
+                                    5% maximal IV relative bias    21.01
+                                   10% maximal IV relative bias    11.52
+                                   20% maximal IV relative bias     6.53
+                                   30% maximal IV relative bias     4.75
+                                   10% maximal IV size             43.27
+                                   15% maximal IV size             23.24
+                                   20% maximal IV size             16.35
+                                   25% maximal IV size             12.82
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for i.i.d. errors only.
+
+Underidentification test
+Ho: matrix of reduced form coefficients has rank=K1-1 (underidentified)
+Ha: matrix has rank=K1 (identified)
+Kleibergen-Paap rk LM statistic          Chi-sq(1)=105.41   P-val=0.0000
+
+Weak identification test
+Ho: equation is weakly identified
+Cragg-Donald Wald F statistic                                      28.74
+Kleibergen-Paap Wald rk F statistic                                 9.10
+
+Stock-Yogo weak ID test critical values for K1=12 and L1=12:
+                                                               <not available>
+
+Weak-instrument-robust inference
+Tests of joint significance of endogenous regressors B1 in main equation
+Ho: B1=0 and orthogonality conditions are valid
+Anderson-Rubin Wald test           F(12,3100)=     1.64     P-val=0.0735
+Anderson-Rubin Wald test           Chi-sq(12)=    19.71     P-val=0.0727
+Stock-Wright LM S statistic        Chi-sq(12)=    23.80     P-val=0.0217
+
+NB: Underidentification, weak identification and weak-identification-robust
+    test statistics cluster-robust
+
+Number of clusters             N_clust  =       3101
+Number of observations               N  =    1131865
+Number of regressors                 K  =         21
+Number of endogenous regressors      K1 =         12
+Number of instruments                L  =         21
+Number of excluded instruments       L1 =         12
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on fips
+
+Number of clusters (fips) =       3101                Number of obs =  1131865
+                                                      F( 21,  3100) =     6.46
+                                                      Prob > F      =   0.0000
+Total (centered) SS     =   1483.00274                Centered R2   =  -0.0035
+Total (uncentered) SS   =   1483.00274                Uncentered R2 =  -0.0035
+Residual SS             =  1488.139321                Root MSE      =   .03626
+
+------------------------------------------------------------------------------------
+                   |               Robust
+ accident_occurred |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+ month#c.mean_pm25 |
+                1  |  -.0003418   .0003144    -1.09   0.277    -.0009583    .0002746
+                2  |  -.0003342    .000298    -1.12   0.262    -.0009184      .00025
+                3  |   -.000447   .0003814    -1.17   0.241    -.0011949    .0003009
+                4  |  -.0004916   .0004624    -1.06   0.288    -.0013983    .0004151
+                5  |  -.0005039   .0004605    -1.09   0.274    -.0014069     .000399
+                6  |  -.0003439   .0003644    -0.94   0.345    -.0010584    .0003706
+                7  |  -.0003651   .0003839    -0.95   0.342    -.0011178    .0003876
+                8  |  -.0003552   .0003703    -0.96   0.338    -.0010812    .0003709
+                9  |  -.0003633   .0003523    -1.03   0.302     -.001054    .0003274
+               10  |  -.0004802   .0004466    -1.08   0.282    -.0013558    .0003955
+               11  |  -.0005245   .0004689    -1.12   0.263    -.0014438    .0003949
+               12  |  -.0003945   .0003378    -1.17   0.243    -.0010568    .0002678
+                   |
+  mean_temperature |   .0000752   .0000862     0.87   0.383    -.0000939    .0002442
+mean_precipitation |  -.0000968    .000075    -1.29   0.197    -.0002438    .0000502
+        employment |   3.97e-07   5.69e-07     0.70   0.486    -7.19e-07    1.51e-06
+   weekday_dummy_2 |   .0013873   .0002002     6.93   0.000     .0009947    .0017798
+   weekday_dummy_3 |   .0015806    .000205     7.71   0.000     .0011787    .0019825
+   weekday_dummy_4 |   .0016439   .0002037     8.07   0.000     .0012446    .0020432
+   weekday_dummy_5 |   .0015161   .0002047     7.41   0.000     .0011147    .0019175
+   weekday_dummy_6 |   .0014739   .0001697     8.68   0.000     .0011411    .0018067
+   weekday_dummy_7 |   .0005332   .0001135     4.70   0.000     .0003106    .0007558
+------------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):            105.406
+                                                   Chi-sq(1) P-val =    0.0000
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):               28.742
+                         (Kleibergen-Paap rk Wald F statistic):          9.100
+Stock-Yogo weak ID test critical values:                       <not available>
+------------------------------------------------------------------------------
+Hansen J statistic (overidentification test of all instruments):         0.000
+                                                 (equation exactly identified)
+------------------------------------------------------------------------------
+Instrumented:         1b.month#c.mean_pm25 2.month#c.mean_pm25
+                      3.month#c.mean_pm25 4.month#c.mean_pm25
+                      5.month#c.mean_pm25 6.month#c.mean_pm25
+                      7.month#c.mean_pm25 8.month#c.mean_pm25
+                      9.month#c.mean_pm25 10.month#c.mean_pm25
+                      11.month#c.mean_pm25 12.month#c.mean_pm25
+Included instruments: mean_temperature mean_precipitation employment
+                      weekday_dummy_2 weekday_dummy_3 weekday_dummy_4
+                      weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
+Excluded instruments: 1b.month#c.inversion_coverage
+                      2.month#c.inversion_coverage 3.month#c.inversion_coverage
+                      4.month#c.inversion_coverage 5.month#c.inversion_coverage
+                      6.month#c.inversion_coverage 7.month#c.inversion_coverage
+                      8.month#c.inversion_coverage 9.month#c.inversion_coverage
+                      10.month#c.inversion_coverage
+                      11.month#c.inversion_coverage
+                      12.month#c.inversion_coverage
+Partialled-out:       _cons
+                      nb: total SS, model F and R2s are after partialling-out;
+                          any small-sample adjustments include partialled-out
+                          variables in regressor count K
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+        fips |      3101        3101           0    *|
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+(est1 stored)
+
+. 
+. * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
+. esttab using monthly.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(Monthly\label{tab1})
+(note: file monthly.tex not found)
+(output written to monthly.tex)
+
+. esttab using monthly.rtf, replace label mtitles nogap onecell
+(note: file monthly.rtf not found)
+(output written to monthly.rtf)
+
+. eststo clear
+
+. 
+. *********** Below this line also applies to all regressions ********************
+. 
+. * Close the log
+. log close main
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\construction_monthly_analysis_log.log
+  log type:  text
+ closed on:  19 Aug 2020, 16:58:58
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------

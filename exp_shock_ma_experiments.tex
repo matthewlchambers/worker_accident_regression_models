@@ -1,0 +1,53 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Exposure, Shock, and Moving Average Experiments\label{tab1}}
+\begin{tabular}{l*{4}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}\\
+                    &\multicolumn{1}{c}{Exposure}&\multicolumn{1}{c}{Shock}&\multicolumn{1}{c}{2-Day Moving Average}&\multicolumn{1}{c}{Difference from Annual Mean}\\
+\midrule
+mean\_pm25           &   0.0000196         &                     &                     &                     \\
+                    &      (0.13)         &                     &                     &                     \\
+\addlinespace
+mean\_temperature    &  0.00000870         &  0.00000125         &   0.0000178         &  0.00000870         \\
+                    &      (0.32)         &      (0.09)         &      (0.62)         &      (0.32)         \\
+\addlinespace
+mean\_precipitation  &  -0.0000164         &   -0.000164         &  -0.0000234         &  -0.0000164         \\
+                    &     (-0.58)         &     (-0.95)         &     (-1.26)         &     (-0.58)         \\
+\addlinespace
+employment          & 0.000000513         & 0.000000482         & 0.000000430         & 0.000000513         \\
+                    &      (0.92)         &      (0.89)         &      (0.77)         &      (0.92)         \\
+\addlinespace
+weekday==     2.0000&     0.00148\sym{***}&     0.00149\sym{***}&     0.00148\sym{***}&     0.00148\sym{***}\\
+                    &      (7.71)         &      (7.75)         &      (7.70)         &      (7.71)         \\
+\addlinespace
+weekday==     3.0000&     0.00168\sym{***}&     0.00189\sym{***}&     0.00166\sym{***}&     0.00168\sym{***}\\
+                    &      (8.73)         &      (5.66)         &      (8.58)         &      (8.73)         \\
+\addlinespace
+weekday==     4.0000&     0.00174\sym{***}&     0.00199\sym{***}&     0.00173\sym{***}&     0.00174\sym{***}\\
+                    &      (8.78)         &      (5.19)         &      (8.70)         &      (8.78)         \\
+\addlinespace
+weekday==     5.0000&     0.00168\sym{***}&     0.00159\sym{***}&     0.00167\sym{***}&     0.00168\sym{***}\\
+                    &      (9.35)         &      (7.83)         &      (9.38)         &      (9.35)         \\
+\addlinespace
+weekday==     6.0000&     0.00154\sym{***}&     0.00190\sym{***}&     0.00153\sym{***}&     0.00154\sym{***}\\
+                    &      (8.91)         &      (3.91)         &      (8.80)         &      (8.91)         \\
+\addlinespace
+weekday==     7.0000&    0.000450\sym{***}&     0.00101         &    0.000462\sym{***}&    0.000450\sym{***}\\
+                    &      (5.32)         &      (1.52)         &      (5.72)         &      (5.32)         \\
+\addlinespace
+pm25\_shock          &                     &    -0.00102         &                     &                     \\
+                    &                     &     (-0.83)         &                     &                     \\
+\addlinespace
+ma\_pm25             &                     &                     &  -0.0000273         &                     \\
+                    &                     &                     &     (-0.19)         &                     \\
+\addlinespace
+diff\_from\_annual\_mean\_pm25&                     &                     &                     &   0.0000196         \\
+                    &                     &                     &                     &      (0.13)         \\
+\midrule
+Observations        &     1131865         &     1128764         &     1128764         &     1131865         \\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{5}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}

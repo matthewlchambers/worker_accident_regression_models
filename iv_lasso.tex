@@ -1,0 +1,56 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{FE and Clustering Experiments\label{tab1}}
+\begin{tabular}{l*{4}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}\\
+                    &\multicolumn{1}{c}{est1}&\multicolumn{1}{c}{est2}&\multicolumn{1}{c}{est3}&\multicolumn{1}{c}{est4}\\
+\midrule
+mean\_pm25           &   0.0000196         &   0.0000235         &           0         &           0         \\
+                    &      (0.13)         &      (0.10)         &         (.)         &         (.)         \\
+\addlinespace
+mean\_temperature    &  0.00000870         &  0.00000895         &           0         &           0         \\
+                    &      (0.32)         &      (0.33)         &         (.)         &         (.)         \\
+\addlinespace
+mean\_precipitation  &  -0.0000164         &  -0.0000166         &           0         &           0         \\
+                    &     (-0.58)         &     (-0.60)         &         (.)         &         (.)         \\
+\addlinespace
+employment          & 0.000000513         & 0.000000512         &           0         &           0         \\
+                    &      (0.92)         &      (0.92)         &         (.)         &         (.)         \\
+\addlinespace
+weekday==     2.0000&     0.00148\sym{***}&     0.00148\sym{***}&           0         &           0         \\
+                    &      (7.71)         &      (7.67)         &         (.)         &         (.)         \\
+\addlinespace
+weekday==     3.0000&     0.00168\sym{***}&     0.00168\sym{***}&           0         &           0         \\
+                    &      (8.74)         &      (8.75)         &         (.)         &         (.)         \\
+\addlinespace
+weekday==     4.0000&     0.00174\sym{***}&     0.00174\sym{***}&           0         &           0         \\
+                    &      (8.78)         &      (8.80)         &         (.)         &         (.)         \\
+\addlinespace
+weekday==     5.0000&     0.00168\sym{***}&     0.00168\sym{***}&           0         &           0         \\
+                    &      (9.35)         &      (9.35)         &         (.)         &         (.)         \\
+\addlinespace
+weekday==     6.0000&     0.00154\sym{***}&     0.00154\sym{***}&           0         &           0         \\
+                    &      (8.91)         &      (8.92)         &         (.)         &         (.)         \\
+\addlinespace
+weekday==     7.0000&    0.000450\sym{***}&    0.000450\sym{***}&           0         &           0         \\
+                    &      (5.32)         &      (5.32)         &         (.)         &         (.)         \\
+\addlinespace
+mean\_pm25 $\times$ mean\_pm25&                     &-0.000000172         &           0         &           0         \\
+                    &                     &     (-0.03)         &         (.)         &         (.)         \\
+\addlinespace
+mean\_pm25 $\times$ mean\_pm25 $\times$ mean\_pm25&                     &                     &           0         &           0         \\
+                    &                     &                     &         (.)         &         (.)         \\
+\addlinespace
+mean\_pm25 $\times$ mean\_pm25 $\times$ mean\_pm25 $\times$ mean\_pm25&                     &                     &           0         &           0         \\
+                    &                     &                     &         (.)         &         (.)         \\
+\addlinespace
+mean\_pm25 $\times$ mean\_pm25 $\times$ mean\_pm25 $\times$ mean\_pm25 $\times$ mean\_pm25&                     &                     &                     &           0         \\
+                    &                     &                     &                     &         (.)         \\
+\midrule
+Observations        &     1131865         &     1131865         &     1131865         &     1131865         \\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{5}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}

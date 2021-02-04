@@ -20,11 +20,15 @@ shapefile_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Count
 shapefile_file <- function () return ('cb_2016_us_county_20m.shp')
 
 # Define input parameters for the files we wish to download. Note that the ftp directories must inlcude / at
-# the end, since they will be pasted to gether with the filename to get a url.
+# the end, since they will be pasted toether with the filename to get a url.
 precipitation_dir <- 'ftp://ftp.cdc.noaa.gov/Datasets/NARR/Dailies/monolevel/'
 precipitation_file <- function (year) return (paste0('apcp.', year, '.nc'))
 temperature_dir <- 'ftp://ftp.cdc.noaa.gov/Datasets/NARR/Dailies/monolevel/'
 temperature_file <- function (year) return (paste0('air.2m.', year, '.nc'))
+u_wind_dir <- 'ftp://ftp.cdc.noaa.gov/Datasets/NARR/Dailies/monolevel/'
+u_wind_file <- function (year) return (paste0('uwnd.10m.', year, '.nc'))
+v_wind_dir <- 'ftp://ftp.cdc.noaa.gov/Datasets/NARR/Dailies/monolevel/'
+v_wind_file <- function (year) return (paste0('vwnd.10m.', year, '.nc'))
 
 # Define output parameters for the output data file(s) to be saved.
 output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Weather Data'
@@ -43,10 +47,25 @@ for (year in begin_year:end_year) {
   setwd(tempdir())
   system(paste('wget -nc', paste0(precipitation_dir, precipitation_file(year))))
   system(paste('wget -nc', paste0(temperature_dir, temperature_file(year))))
+  system(paste('wget -nc', paste0(u_wind_dir, u_wind_file(year))))
+  system(paste('wget -nc', paste0(v_wind_dir, v_wind_file(year))))
 
   # Open the files so I can extract data. Raster bricks are incredibly convenient to work with.
   precipitation_brick <- brick(precipitation_file(year)) # tempdir() already set as working directory
   temperature_brick <- brick(temperature_file(year)) # tempdir() already set as working directory
+  u_wind_brick <- brick(u_wind_file(year)) # tempdir() already set as working directory
+  v_wind_brick <- brick(v_wind_file(year)) # tempdir() already set as working directory
+
+  # Calculate wind speed from u- and v-components. Normalize those components to unit vector directions
+  # by dividing by wind speed. Average wind direction will be calculated later.
+  wind_speed_brick <- (u_wind_brick ^ 2 + v_wind_brick ^ 2) ^ 0.5
+  u_wind_unit_brick <- u_wind_brick / wind_speed_brick
+  v_wind_unit_brick <- v_wind_brick / wind_speed_brick
+
+  # Assign correct names (with date information) to layers in the raster bricks just created by calculation
+  names(wind_speed_brick) <- names(u_wind_brick)
+  names(u_wind_unit_brick) <- names(u_wind_brick)
+  names(v_wind_unit_brick) <- names(u_wind_brick)
 
   # Open the shapefile, so I can extract daily means of the weather variables by county.
   counties <- st_read(file.path(shapefile_dir, shapefile_file()))
@@ -56,6 +75,15 @@ for (year in begin_year:end_year) {
     bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
   mean_precipitation_data <- precipitation_brick %>% exact_extract(counties, 'mean') %>%
     bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+  mean_wind_speed_data <- wind_speed_brick %>% exact_extract(counties, 'mean') %>%
+    bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+  mean_u_wind_unit_data <- u_wind_unit_brick %>% exact_extract(counties, 'mean') %>%
+    bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+  mean_v_wind_unit_data <- v_wind_unit_brick %>% exact_extract(counties, 'mean') %>%
+    bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+  # The lines below need to be adjusted to reflect a circular mean, then uncommented
+  #mean_wind_direction_data <- wind_direction_brick %>% exact_extract(counties, 'mean') %>%
+  #  bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
 
   # Reshape the tibbles so that each observation corresponds to a county-day, and change the date variable to
   # an R readable date variables.
@@ -65,7 +93,7 @@ for (year in begin_year:end_year) {
       names_to = 'date',
       names_prefix = 'mean.X',
       values_to = 'mean_temperature'
-    ) %>% mutate(date = date %>% ymd())
+    ) %>% mutate(date = date %>% ymd_hms() %>% date())
   mean_precipitation_data %<>%
     pivot_longer(
       starts_with('mean.X'),
@@ -73,8 +101,36 @@ for (year in begin_year:end_year) {
       names_prefix = 'mean.X',
       values_to = 'mean_precipitation'
     ) %>% mutate(date = date %>% ymd())
+  mean_wind_speed_data %<>%
+    pivot_longer(
+      starts_with('mean.X'),
+      names_to = 'date',
+      names_prefix = 'mean.X',
+      values_to = 'mean_wind_speed'
+    ) %>% mutate(date = date %>% ymd_hms() %>% date())
+  mean_u_wind_unit_data %<>%
+    pivot_longer(
+      starts_with('mean.X'),
+      names_to = 'date',
+      names_prefix = 'mean.X',
+      values_to = 'mean_u_wind_unit'
+    ) %>% mutate(date = date %>% ymd_hms() %>% date())
+  mean_v_wind_unit_data %<>%
+    pivot_longer(
+      starts_with('mean.X'),
+      names_to = 'date',
+      names_prefix = 'mean.X',
+      values_to = 'mean_v_wind_unit'
+    ) %>% mutate(date = date %>% ymd_hms() %>% date())
+
+  # Use average u- and v- unit vector components to get unit vector average wind direction: average wind direction
+  # unweighted by wind speed.
+  mean_wind_direction_data <- left_join(mean_u_wind_unit_data, mean_v_wind_unit_data) %>%
+    mutate(mean_wind_direction = (180 / pi) * atan2(mean_u_wind_unit, mean_v_wind_unit) + 180)
 
   # Merge the weather data together into a single tibble, then save as a csv
-  weather_data <- left_join(mean_temperature_data, mean_precipitation_data)
-  write_csv(weather_data, file.path(output_dir, output_file(year,'mean_temp_mean_precip')))
+  weather_data <- mean_temperature_data %>% left_join(mean_precipitation_data) %>%
+    left_join(mean_wind_speed_data) %>% left_join(mean_wind_direction_data %>%
+                                                                      select(-c(mean_u_wind_unit, mean_v_wind_unit)))
+  write_csv(weather_data, file.path(output_dir, output_file(year,'temp_precip_wind')))
 }

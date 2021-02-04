@@ -1,0 +1,126 @@
+{smcl}
+{com}{sf}{ul off}{txt}{.-}
+      name:  {res}main
+       {txt}log:  {res}E:\Research Projects\Worker Accidents and Pollution\Regression Models\Construction_accident_analysis_log.txt
+  {txt}log type:  {res}smcl
+ {txt}opened on:  {res}20 Jul 2020, 20:44:06
+{txt}
+{com}. 
+. * Import the clean data file, produced using R. I'm using Stata for the analysis.
+. * because Stata works with panel data a little easier.
+. import delimited "../Data/Data for Regression Models/construction_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+{res}{text}(12 vars, 15,288,560 obs)
+
+{com}. 
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+{txt}
+{com}. drop date
+{txt}
+{com}. rename temporary_date date
+{res}{txt}
+{com}. format date %td
+{txt}
+{com}. 
+. * Destring mean_pm25 because somehow it imported as a date.
+. destring mean_pm25, force replace
+{txt}mean_pm25 already numeric; no {res}replace
+{txt}
+{com}. 
+. * Declare the data as panel data.
+. xtset fips date
+{res}{txt}{col 8}panel variable:  {res}fips (strongly balanced)
+{txt}{col 9}time variable:  {res}{col 25}date, 01jan2003 to 31dec2015
+{txt}{col 17}delta:  {res}1 day
+{txt}
+{com}. 
+. * Make a binary for an accident occurring
+. gen accident_occurred = 1 if num_accidents > 0
+{txt}(15,273,513 missing values generated)
+
+{com}. replace accident_occurred = 0 if accident_occurred == .
+{txt}(15,273,513 real changes made)
+
+{com}. 
+. * Make some variables for modeling simple non-linearity in the exposure
+. gen mean_pm25_2 = mean_pm25^2
+{txt}(531,855 missing values generated)
+
+{com}. gen mean_pm25_3 = mean_pm25^3
+{txt}(531,855 missing values generated)
+
+{com}. gen mean_pm25_log = log(mean_pm25)
+{txt}(531,855 missing values generated)
+
+{com}. 
+. * Start esimating some models
+. xtivreg accident_occurred mean_temperature mean_precipitation employment weekday (mean_pm25 = inversion_coverage), fe
+{res}
+{txt}Fixed-effects (within) IV regression{col 49}Number of obs{col 67}={col 69}{res}14,710,686
+{txt}Group variable: {res}fips{txt}{col 49}Number of groups{col 67}={col 69}{res}     3,108
+
+{txt}R-sq:{col 49}Obs per group:
+     within  = {res}0.0014{col 63}{txt}min{col 67}={col 69}{res}       365
+{txt}     between = {res}0.5061{col 63}{txt}avg{col 67}={col 69}{res}   4,733.2
+{txt}     overall = {res}0.0190{col 63}{txt}max{col 67}={col 69}{res}     4,748
+
+{txt}{col 49}Wald chi2({res}5{txt}){col 67}={col 70}{res} 36638.14
+{txt}corr(u_i, Xb){col 16}= {res}-0.3909{txt}{col 49}Prob > chi2{col 67}={col 73}{res}0.0000
+
+{txt}{hline 19}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1} accident_occurred{col 20}{c |}      Coef.{col 32}   Std. Err.{col 44}      z{col 52}   P>|z|{col 60}     [95% Con{col 73}f. Interval]
+{hline 19}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 9}mean_pm25 {c |}{col 20}{res}{space 2} .0000707{col 32}{space 2}  .000031{col 43}{space 1}    2.28{col 52}{space 3}0.023{col 60}{space 4} 9.89e-06{col 73}{space 3} .0001315
+{txt}{space 2}mean_temperature {c |}{col 20}{res}{space 2}-3.31e-06{col 32}{space 2} 3.80e-06{col 43}{space 1}   -0.87{col 52}{space 3}0.384{col 60}{space 4}-.0000108{col 73}{space 3} 4.14e-06
+{txt}mean_precipitation {c |}{col 20}{res}{space 2}-4.59e-06{col 32}{space 2} 4.25e-06{col 43}{space 1}   -1.08{col 52}{space 3}0.280{col 60}{space 4}-.0000129{col 73}{space 3} 3.74e-06
+{txt}{space 8}employment {c |}{col 20}{res}{space 2} 9.01e-07{col 32}{space 2} 6.84e-09{col 43}{space 1}  131.69{col 52}{space 3}0.000{col 60}{space 4} 8.88e-07{col 73}{space 3} 9.14e-07
+{txt}{space 11}weekday {c |}{col 20}{res}{space 2} .0000146{col 32}{space 2} 4.37e-06{col 43}{space 1}    3.33{col 52}{space 3}0.001{col 60}{space 4} 5.99e-06{col 73}{space 3} .0000231
+{txt}{space 13}_cons {c |}{col 20}{res}{space 2} -.000507{col 32}{space 2} .0008206{col 43}{space 1}   -0.62{col 52}{space 3}0.537{col 60}{space 4}-.0021152{col 73}{space 3} .0011013
+{txt}{hline 19}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+           sigma_u {c |} {res}   .004573
+           {txt}sigma_e {c |} {res} .03131962
+               {txt}rho {c |} {res} .02087408{txt}   (fraction of variance due to u_i)
+{hline 19}{c BT}{hline 64}
+F  test that all u_i=0:     F({res}3107{txt},{res}14707573{txt}) = {res}   84.90{col 59}{txt}Prob > F    = {res}0.0000
+{txt}{hline 84}
+{p 0 16 40}Instrumented:{space 3}mean_pm25{p_end}
+{p 0 16 40}Instruments:{space 4}mean_temperature mean_precipitation employment weekday inversion_coverage{p_end}
+{hline 84}
+
+{com}. xtivreg accident_occurred mean_temperature mean_precipitation employment weekday (mean_pm25_log = inversion_coverage), fe
+{res}
+{txt}Fixed-effects (within) IV regression{col 49}Number of obs{col 67}={col 69}{res}14,710,686
+{txt}Group variable: {res}fips{txt}{col 49}Number of groups{col 67}={col 69}{res}     3,108
+
+{txt}R-sq:{col 49}Obs per group:
+     within  = {res}0.0014{col 63}{txt}min{col 67}={col 69}{res}       365
+{txt}     between = {res}0.5056{col 63}{txt}avg{col 67}={col 69}{res}   4,733.2
+{txt}     overall = {res}0.0190{col 63}{txt}max{col 67}={col 69}{res}     4,748
+
+{txt}{col 49}Wald chi2({res}5{txt}){col 67}={col 70}{res} 36638.74
+{txt}corr(u_i, Xb){col 16}= {res}-0.3933{txt}{col 49}Prob > chi2{col 67}={col 73}{res}0.0000
+
+{txt}{hline 19}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1} accident_occurred{col 20}{c |}      Coef.{col 32}   Std. Err.{col 44}      z{col 52}   P>|z|{col 60}     [95% Con{col 73}f. Interval]
+{hline 19}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 5}mean_pm25_log {c |}{col 20}{res}{space 2} .0006326{col 32}{space 2} .0002776{col 43}{space 1}    2.28{col 52}{space 3}0.023{col 60}{space 4} .0000885{col 73}{space 3} .0011767
+{txt}{space 2}mean_temperature {c |}{col 20}{res}{space 2}-4.28e-06{col 32}{space 2} 4.22e-06{col 43}{space 1}   -1.02{col 52}{space 3}0.310{col 60}{space 4}-.0000125{col 73}{space 3} 3.98e-06
+{txt}mean_precipitation {c |}{col 20}{res}{space 2}-3.07e-06{col 32}{space 2} 4.89e-06{col 43}{space 1}   -0.63{col 52}{space 3}0.529{col 60}{space 4}-.0000127{col 73}{space 3} 6.50e-06
+{txt}{space 8}employment {c |}{col 20}{res}{space 2} 9.02e-07{col 32}{space 2} 6.66e-09{col 43}{space 1}  135.41{col 52}{space 3}0.000{col 60}{space 4} 8.89e-07{col 73}{space 3} 9.15e-07
+{txt}{space 11}weekday {c |}{col 20}{res}{space 2} .0000145{col 32}{space 2} 4.39e-06{col 43}{space 1}    3.29{col 52}{space 3}0.001{col 60}{space 4} 5.85e-06{col 73}{space 3} .0000231
+{txt}{space 13}_cons {c |}{col 20}{res}{space 2}-.0008636{col 32}{space 2} .0006722{col 43}{space 1}   -1.28{col 52}{space 3}0.199{col 60}{space 4}-.0021811{col 73}{space 3}  .000454
+{txt}{hline 19}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+           sigma_u {c |} {res} .00458061
+           {txt}sigma_e {c |} {res} .03131936
+               {txt}rho {c |} {res} .02094253{txt}   (fraction of variance due to u_i)
+{hline 19}{c BT}{hline 64}
+F  test that all u_i=0:     F({res}3107{txt},{res}14707573{txt}) = {res}   85.01{col 59}{txt}Prob > F    = {res}0.0000
+{txt}{hline 84}
+{p 0 16 40}Instrumented:{space 3}mean_pm25_log{p_end}
+{p 0 16 40}Instruments:{space 4}mean_temperature mean_precipitation employment weekday inversion_coverage{p_end}
+{hline 84}
+
+{com}. 
+{txt}end of do-file
+
+{com}. exit, clear

@@ -1,0 +1,2770 @@
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\Construction_accident_analysis_log.log
+  log type:  text
+ opened on:   1 Aug 2020, 12:22:47
+
+. 
+. * Import the clean data file, produced using R. I'm using Stata for the analysis.
+. * because Stata works with panel data a little easier.
+. import delimited "../Data/Data for Regression Models/construction_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+(12 vars, 15,288,560 obs)
+
+. 
+. * Take a smaller sample for local code testing
+. keep if strpos(date, "2005")
+(14,113,260 observations deleted)
+
+. 
+. ********* End of section to change when switching between local and ACCRE ******
+. 
+end of do-file
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. * Make some bins of exposure level, shock size, and inversions for looking at more complicated non-linearities.
+. egen pm25_exposure_bin_labels = cut(mean_pm25), group(20)
+(40880 missing values generated)
+
+. egen inversion_exposure_bin_labels = cut(inversion_coverage), group(20)
+
+. gen pm25_shock = mean_pm25 - L.mean_pm25
+time variable not set
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+
+. drop date
+
+. rename temporary_date date
+
+. format date %td
+
+. 
+. * Create a month variable so I can absorb month-of-year fixed effects
+. gen month = month(date)
+
+. 
+. * Create weekday dummy variables, since ivreg2 can't handle factor variables
+. tabulate weekday, generate(weekday_dummy_)
+
+    weekday |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |    167,440       14.25       14.25
+          2 |    167,440       14.25       28.49
+          3 |    167,440       14.25       42.74
+          4 |    167,440       14.25       56.99
+          5 |    167,440       14.25       71.23
+          6 |    167,440       14.25       85.48
+          7 |    170,660       14.52      100.00
+------------+-----------------------------------
+      Total |  1,175,300      100.00
+
+. drop weekday_dummy_1
+
+. 
+. * Destring mean_pm25 because somehow it imported as a date.
+. destring mean_pm25, force replace
+mean_pm25 already numeric; no replace
+
+. 
+. * Drop any observations from Alaska, Hawaii, or Puerto Rico.
+. drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72
+(40,880 observations deleted)
+
+. 
+. * Declare the data as panel data.
+. xtset fips date
+       panel variable:  fips (strongly balanced)
+        time variable:  date, 01jan2005 to 31dec2005
+                delta:  1 day
+
+. 
+. * Make a binary for an accident occurring.
+. gen accident_occurred = 1 if num_accidents > 0
+(1,132,861 missing values generated)
+
+. replace accident_occurred = 0 if accident_occurred == .
+(1,132,861 real changes made)
+
+. 
+end of do-file
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. * Make some bins of exposure level, shock size, and inversions for looking at more complicated non-linearities.
+. egen pm25_exposure_bin_labels = cut(mean_pm25), group(20)
+variable pm25_exposure_bin_labels already defined
+r(110);
+
+end of do-file
+
+r(110);
+
+. drop pm25_
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. * Make some bins of exposure level, shock size, and inversions for looking at more complicated non-linearities.
+. egen pm25_exposure_bin_labels = cut(mean_pm25), group(20)
+
+. egen inversion_exposure_bin_labels = cut(inversion_coverage), group(20)
+variable inversion_exposure_bin_labels already defined
+r(110);
+
+end of do-file
+
+r(110);
+
+. drop inversion_exposure_bin
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. egen inversion_exposure_bin_labels = cut(inversion_coverage), group(20)
+
+. gen pm25_shock = mean_pm25 - L.mean_pm25
+(3,108 missing values generated)
+
+. gen inversion_shock = inversion_coverage - L.inversion_coverage
+(3,108 missing values generated)
+
+. egen pm25_shock_bin_labels = cut(pm25_shock), group(20)
+(3108 missing values generated)
+
+. egen inversion_shock_bin_labels = cut(inversion_shock), group(20)
+(3108 missing values generated)
+
+. 
+. * Have to actually create dummy variables, since ivreg2 does not support factor variable operators.
+. tabulate pm25_exposure_bin_labels, generate(pm25_exposure_bin_)
+
+pm25_exposu |
+re_bin_labe |
+         ls |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |     56,721        5.00        5.00
+          1 |     56,721        5.00       10.00
+          2 |     56,721        5.00       15.00
+          3 |     56,721        5.00       20.00
+          4 |     56,721        5.00       25.00
+          5 |     56,721        5.00       30.00
+          6 |     56,721        5.00       35.00
+          7 |     56,721        5.00       40.00
+          8 |     56,721        5.00       45.00
+          9 |     56,721        5.00       50.00
+         10 |     56,721        5.00       55.00
+         11 |     56,721        5.00       60.00
+         12 |     56,721        5.00       65.00
+         13 |     56,721        5.00       70.00
+         14 |     56,721        5.00       75.00
+         15 |     56,721        5.00       80.00
+         16 |     56,721        5.00       85.00
+         17 |     56,721        5.00       90.00
+         18 |     56,721        5.00       95.00
+         19 |     56,721        5.00      100.00
+------------+-----------------------------------
+      Total |  1,134,420      100.00
+
+. tabulate inversion_exposure_bin_labels, generate(inversion_exposure_bin_)
+
+inversion_e |
+xposure_bin |
+    _labels |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          4 |    283,603       25.00       25.00
+          5 |     56,723        5.00       30.00
+          6 |     56,721        5.00       35.00
+          7 |     56,721        5.00       40.00
+          8 |     56,721        5.00       45.00
+          9 |     56,721        5.00       50.00
+         10 |     56,721        5.00       55.00
+         11 |     56,721        5.00       60.00
+         12 |     25,864        2.28       62.28
+         13 |     87,578        7.72       70.00
+         14 |     56,721        5.00       75.00
+         15 |     56,721        5.00       80.00
+         16 |     39,114        3.45       83.45
+         17 |     74,327        6.55       90.00
+         18 |     33,219        2.93       92.93
+         19 |     80,224        7.07      100.00
+------------+-----------------------------------
+      Total |  1,134,420      100.00
+
+. tabulate pm25_shock_bin_labels, generate(pm25_shock_bin_)
+
+pm25_shock_ |
+ bin_labels |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |     56,565        5.00        5.00
+          1 |     56,566        5.00       10.00
+          2 |     56,565        5.00       15.00
+          3 |     56,566        5.00       20.00
+          4 |     56,566        5.00       25.00
+          5 |     56,565        5.00       30.00
+          6 |     56,566        5.00       35.00
+          7 |     56,565        5.00       40.00
+          8 |     56,566        5.00       45.00
+          9 |     56,566        5.00       50.00
+         10 |     56,565        5.00       55.00
+         11 |     56,566        5.00       60.00
+         12 |     56,565        5.00       65.00
+         13 |     56,566        5.00       70.00
+         14 |     56,566        5.00       75.00
+         15 |     56,565        5.00       80.00
+         16 |     56,566        5.00       85.00
+         17 |     56,565        5.00       90.00
+         18 |     56,566        5.00       95.00
+         19 |     56,566        5.00      100.00
+------------+-----------------------------------
+      Total |  1,131,312      100.00
+
+. tabulate inversion_shock_bin_labels, generate(inversion_shock_bin_)
+
+inversion_s |
+hock_bin_la |
+       bels |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |     54,235        4.79        4.79
+          1 |     58,896        5.21       10.00
+          2 |     56,565        5.00       15.00
+          3 |     56,566        5.00       20.00
+          4 |     56,566        5.00       25.00
+          5 |     56,565        5.00       30.00
+          6 |     56,565        5.00       35.00
+          7 |     54,936        4.86       39.86
+         11 |    227,893       20.14       60.00
+         12 |     56,565        5.00       65.00
+         13 |     56,566        5.00       70.00
+         14 |     56,566        5.00       75.00
+         15 |     56,565        5.00       80.00
+         16 |     56,566        5.00       85.00
+         17 |     56,565        5.00       90.00
+         18 |     56,566        5.00       95.00
+         19 |     56,566        5.00      100.00
+------------+-----------------------------------
+      Total |  1,131,312      100.00
+
+. 
+. * Do the regressions on binned variables.
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* = inversion_exposure_bin_*), absorb(fips month)
+>  cluster(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_exposure_bin_19
+Warning - collinearities detected
+Vars dropped:       pm25_exposure_bin_20 inversion_exposure_bin_16
+                    pm25_exposure_bin_18
+(MWFE estimator converged in 2 iterations)
+equation not identified; must have at least as many instruments
+not in the regression as there are instrumented variables
+r(481);
+
+end of do-file
+
+r(481);
+
+. drop *_bin_*
+
+. drop *_shock
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. * Make some bins of exposure level, shock size, and inversions for looking at more complicated non-linearities.
+. egen pm25_exposure_bin_labels = cut(mean_pm25), group(10)
+
+. egen inversion_exposure_bin_labels = cut(inversion_coverage), group(10)
+
+. gen pm25_shock = mean_pm25 - L.mean_pm25
+(3,108 missing values generated)
+
+. gen inversion_shock = inversion_coverage - L.inversion_coverage
+(3,108 missing values generated)
+
+. egen pm25_shock_bin_labels = cut(pm25_shock), group(10)
+(3108 missing values generated)
+
+. egen inversion_shock_bin_labels = cut(inversion_shock), group(10)
+(3108 missing values generated)
+
+. 
+. * Have to actually create dummy variables, since ivreg2 does not support factor variable operators.
+. tabulate pm25_exposure_bin_labels, generate(pm25_exposure_bin_)
+
+pm25_exposu |
+re_bin_labe |
+         ls |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    113,442       10.00       10.00
+          1 |    113,442       10.00       20.00
+          2 |    113,442       10.00       30.00
+          3 |    113,442       10.00       40.00
+          4 |    113,442       10.00       50.00
+          5 |    113,442       10.00       60.00
+          6 |    113,442       10.00       70.00
+          7 |    113,442       10.00       80.00
+          8 |    113,442       10.00       90.00
+          9 |    113,442       10.00      100.00
+------------+-----------------------------------
+      Total |  1,134,420      100.00
+
+. tabulate inversion_exposure_bin_labels, generate(inversion_exposure_bin_)
+
+inversion_e |
+xposure_bin |
+    _labels |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          2 |    340,326       30.00       30.00
+          3 |    113,442       10.00       40.00
+          4 |    113,442       10.00       50.00
+          5 |    113,442       10.00       60.00
+          6 |    113,442       10.00       70.00
+          7 |    113,442       10.00       80.00
+          8 |    113,441       10.00       90.00
+          9 |    113,443       10.00      100.00
+------------+-----------------------------------
+      Total |  1,134,420      100.00
+
+. tabulate pm25_shock_bin_labels, generate(pm25_shock_bin_)
+
+pm25_shock_ |
+ bin_labels |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    113,131       10.00       10.00
+          1 |    113,131       10.00       20.00
+          2 |    113,131       10.00       30.00
+          3 |    113,131       10.00       40.00
+          4 |    113,132       10.00       50.00
+          5 |    113,131       10.00       60.00
+          6 |    113,131       10.00       70.00
+          7 |    113,131       10.00       80.00
+          8 |    113,131       10.00       90.00
+          9 |    113,132       10.00      100.00
+------------+-----------------------------------
+      Total |  1,131,312      100.00
+
+. tabulate inversion_shock_bin_labels, generate(inversion_shock_bin_)
+
+inversion_s |
+hock_bin_la |
+       bels |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    113,131       10.00       10.00
+          1 |    113,131       10.00       20.00
+          2 |    113,131       10.00       30.00
+          3 |    111,501        9.86       39.86
+          5 |    227,893       20.14       60.00
+          6 |    113,131       10.00       70.00
+          7 |    113,131       10.00       80.00
+          8 |    113,131       10.00       90.00
+          9 |    113,132       10.00      100.00
+------------+-----------------------------------
+      Total |  1,131,312      100.00
+
+. 
+. * Do the regressions on binned variables.
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* = inversion_exposure_bin_*), absorb(fips month)
+>  cluster(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_exposure_bin_9
+Warning - collinearities detected
+Vars dropped:       pm25_exposure_bin_10 inversion_exposure_bin_8
+                    pm25_exposure_bin_8
+(MWFE estimator converged in 2 iterations)
+equation not identified; must have at least as many instruments
+not in the regression as there are instrumented variables
+r(481);
+
+end of do-file
+
+r(481);
+
+. drop inversion_exposure_bin_*
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. egen inversion_exposure_bin_labels = cut(inversion_coverage), group(20)
+
+. 
+end of do-file
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. tabulate inversion_exposure_bin_labels, generate(inversion_exposure_bin_)
+
+inversion_e |
+xposure_bin |
+    _labels |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          4 |    283,603       25.00       25.00
+          5 |     56,723        5.00       30.00
+          6 |     56,721        5.00       35.00
+          7 |     56,721        5.00       40.00
+          8 |     56,721        5.00       45.00
+          9 |     56,721        5.00       50.00
+         10 |     56,721        5.00       55.00
+         11 |     56,721        5.00       60.00
+         12 |     25,864        2.28       62.28
+         13 |     87,578        7.72       70.00
+         14 |     56,721        5.00       75.00
+         15 |     56,721        5.00       80.00
+         16 |     39,114        3.45       83.45
+         17 |     74,327        6.55       90.00
+         18 |     33,219        2.93       92.93
+         19 |     80,224        7.07      100.00
+------------+-----------------------------------
+      Total |  1,134,420      100.00
+
+. 
+end of do-file
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. * Do the regressions on binned variables.
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* = inversion_exposure_bin_*), absorb(fips month)
+>  cluster(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_exposure_bin_9
+Warning - collinearities detected
+Vars dropped:       pm25_exposure_bin_10 inversion_exposure_bin_16
+                    pm25_exposure_bin_8
+(MWFE estimator converged in 2 iterations)
+
+Unable to store first-stage regression of pm25_exposure_bin_labels.
+
+warning: -ranktest- error in calculating underidentification test statistics;
+         may be caused by collinearities
+warning: -ranktest- error in calculating weak identification test statistics;
+         may be caused by collinearities
+
+First-stage regressions
+-----------------------
+
+Unable to display all first-stage regressions.
+There may be insufficient room to store results using -estimates store-,
+or names of endogenous regressors may be too long to store the results.
+Try dropping one or more estimation results using -estimates drop-,
+using the -savefprefix- option, or using shorter variable names.
+
+
+First-stage regression of pm25_exposure_bin_1:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+-----------------------------------------------------------------------------------------------
+                              |               Robust
+          pm25_exposure_bin_1 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+------------------------------+----------------------------------------------------------------
+inversion_exposure_bin_labels |   .0024563   .0001385    17.73   0.000     .0021848    .0027279
+     inversion_exposure_bin_1 |   .0134989   .0013128    10.28   0.000     .0109258    .0160719
+     inversion_exposure_bin_2 |   .0130856          .        .       .            .           .
+     inversion_exposure_bin_3 |   .0092961    .001418     6.56   0.000     .0065168    .0120754
+     inversion_exposure_bin_4 |    .003613   .0014352     2.52   0.012        .0008    .0064261
+     inversion_exposure_bin_5 |  -.0006943   .0014359    -0.48   0.629    -.0035086      .00212
+     inversion_exposure_bin_6 |  -.0099776   .0016094    -6.20   0.000     -.013132   -.0068231
+     inversion_exposure_bin_7 |  -.0152872   .0015874    -9.63   0.000    -.0183985    -.012176
+     inversion_exposure_bin_8 |  -.0282647   .0021897   -12.91   0.000    -.0325564    -.023973
+     inversion_exposure_bin_9 |  -.0436479   .0031867   -13.70   0.000    -.0498936   -.0374021
+    inversion_exposure_bin_10 |   -.047203   .0028165   -16.76   0.000    -.0527234   -.0416827
+    inversion_exposure_bin_11 |  -.0261964   .0020919   -12.52   0.000    -.0302964   -.0220963
+    inversion_exposure_bin_12 |  -.0265974   .0019111   -13.92   0.000    -.0303431   -.0228518
+    inversion_exposure_bin_13 |  -.0250249   .0022307   -11.22   0.000    -.0293971   -.0206527
+    inversion_exposure_bin_14 |  -.0302553   .0020273   -14.92   0.000    -.0342288   -.0262818
+    inversion_exposure_bin_15 |  -.0134563    .001961    -6.86   0.000    -.0172998   -.0096129
+    inversion_exposure_bin_16 |          0  (omitted)
+          pm25_exposure_bin_9 |  -.0070618   .0007229    -9.77   0.000    -.0084786    -.005645
+             mean_temperature |  -.0035992   .0001527   -23.57   0.000    -.0038984   -.0032999
+           mean_precipitation |   .0042435   .0001221    34.75   0.000     .0040041    .0044828
+                   employment |  -5.92e-06   2.90e-06    -2.04   0.041    -.0000116   -2.36e-07
+              weekday_dummy_2 |  -.0072268   .0005685   -12.71   0.000    -.0083409   -.0061126
+              weekday_dummy_3 |   -.007603   .0006628   -11.47   0.000    -.0089022   -.0063039
+              weekday_dummy_4 |  -.0089078   .0007521   -11.84   0.000    -.0103819   -.0074338
+              weekday_dummy_5 |  -.0069683   .0009196    -7.58   0.000    -.0087707   -.0051658
+              weekday_dummy_6 |  -.0141676   .0007797   -18.17   0.000    -.0156958   -.0126394
+              weekday_dummy_7 |  -.0113893   .0005892   -19.33   0.000    -.0125441   -.0102346
+-----------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F( 16,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  8,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_exposure_bin_2:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+-----------------------------------------------------------------------------------------------
+                              |               Robust
+          pm25_exposure_bin_2 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+------------------------------+----------------------------------------------------------------
+inversion_exposure_bin_labels |  -.0010288   .0001236    -8.32   0.000    -.0012711   -.0007864
+     inversion_exposure_bin_1 |  -.0063907   .0014757    -4.33   0.000     -.009283   -.0034984
+     inversion_exposure_bin_2 |  -.0067074          .        .       .            .           .
+     inversion_exposure_bin_3 |  -.0055681   .0016415    -3.39   0.001    -.0087853   -.0023508
+     inversion_exposure_bin_4 |  -.0020001   .0017012    -1.18   0.240    -.0053343    .0013341
+     inversion_exposure_bin_5 |  -.0027431    .001575    -1.74   0.082    -.0058301    .0003439
+     inversion_exposure_bin_6 |   .0005819   .0016462     0.35   0.724    -.0026445    .0038083
+     inversion_exposure_bin_7 |  -.0080932   .0016445    -4.92   0.000    -.0113163   -.0048702
+     inversion_exposure_bin_8 |   .0001127   .0018769     0.06   0.952     -.003566    .0037913
+     inversion_exposure_bin_9 |   .0057791   .0027343     2.11   0.035     .0004201    .0111382
+    inversion_exposure_bin_10 |   .0032046   .0021377     1.50   0.134    -.0009851    .0073943
+    inversion_exposure_bin_11 |   .0012087   .0017587     0.69   0.492    -.0022382    .0046557
+    inversion_exposure_bin_12 |  -.0019344   .0016193    -1.19   0.232    -.0051081    .0012394
+    inversion_exposure_bin_13 |  -.0064934   .0018963    -3.42   0.001    -.0102102   -.0027767
+    inversion_exposure_bin_14 |  -.0060657   .0015725    -3.86   0.000    -.0091477   -.0029836
+    inversion_exposure_bin_15 |   .0011239   .0019151     0.59   0.557    -.0026295    .0048773
+    inversion_exposure_bin_16 |          0  (omitted)
+          pm25_exposure_bin_9 |  -.0573212   .0009676   -59.24   0.000    -.0592178   -.0554247
+             mean_temperature |  -.0042684   .0001162   -36.75   0.000     -.004496   -.0040407
+           mean_precipitation |   .0026303   .0000976    26.96   0.000     .0024391    .0028216
+                   employment |   2.75e-06   2.04e-06     1.35   0.177    -1.24e-06    6.74e-06
+              weekday_dummy_2 |   .0007277   .0008684     0.84   0.402    -.0009744    .0024299
+              weekday_dummy_3 |   .0010352   .0009488     1.09   0.275    -.0008244    .0028949
+              weekday_dummy_4 |   .0019641   .0009634     2.04   0.041     .0000758    .0038523
+              weekday_dummy_5 |   .0100187   .0011076     9.05   0.000     .0078479    .0121895
+              weekday_dummy_6 |   .0001248   .0010295     0.12   0.904     -.001893    .0021426
+              weekday_dummy_7 |   -.000542   .0008501    -0.64   0.524    -.0022082    .0011242
+-----------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F( 16,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  8,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_exposure_bin_3:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+-----------------------------------------------------------------------------------------------
+                              |               Robust
+          pm25_exposure_bin_3 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+------------------------------+----------------------------------------------------------------
+inversion_exposure_bin_labels |  -.0010043   .0001345    -7.46   0.000     -.001268   -.0007406
+     inversion_exposure_bin_1 |  -.0034553   .0014949    -2.31   0.021    -.0063853   -.0005252
+     inversion_exposure_bin_2 |  -.0085009          .        .       .            .           .
+     inversion_exposure_bin_3 |  -.0060707   .0016814    -3.61   0.000    -.0093661   -.0027753
+     inversion_exposure_bin_4 |  -.0049244   .0016576    -2.97   0.003    -.0081733   -.0016756
+     inversion_exposure_bin_5 |  -.0032213   .0016356    -1.97   0.049    -.0064271   -.0000156
+     inversion_exposure_bin_6 |  -.0017823   .0016277    -1.09   0.274    -.0049726     .001408
+     inversion_exposure_bin_7 |  -.0027866   .0016674    -1.67   0.095    -.0060546    .0004815
+     inversion_exposure_bin_8 |   .0035806   .0017676     2.03   0.043     .0001161     .007045
+     inversion_exposure_bin_9 |   .0091534   .0024871     3.68   0.000     .0042787    .0140281
+    inversion_exposure_bin_10 |   .0108156   .0019046     5.68   0.000     .0070826    .0145485
+    inversion_exposure_bin_11 |  -.0025765   .0017416    -1.48   0.139    -.0059899    .0008369
+    inversion_exposure_bin_12 |  -.0039384   .0017539    -2.25   0.025     -.007376   -.0005008
+    inversion_exposure_bin_13 |  -.0039281    .001933    -2.03   0.042    -.0077167   -.0001394
+    inversion_exposure_bin_14 |  -.0040993   .0017014    -2.41   0.016     -.007434   -.0007646
+    inversion_exposure_bin_15 |   .0011056    .002027     0.55   0.585    -.0028673    .0050785
+    inversion_exposure_bin_16 |          0  (omitted)
+          pm25_exposure_bin_9 |  -.0862664   .0008393  -102.78   0.000    -.0879115   -.0846214
+             mean_temperature |  -.0027033   .0000993   -27.24   0.000    -.0028978   -.0025088
+           mean_precipitation |   .0022755   .0000776    29.31   0.000     .0021233    .0024277
+                   employment |   7.92e-06   2.25e-06     3.52   0.000     3.51e-06    .0000123
+              weekday_dummy_2 |    .006774   .0009322     7.27   0.000     .0049469    .0086011
+              weekday_dummy_3 |   .0065061    .000962     6.76   0.000     .0046205    .0083917
+              weekday_dummy_4 |   .0076865    .000972     7.91   0.000     .0057814    .0095916
+              weekday_dummy_5 |   .0220592   .0010439    21.13   0.000     .0200131    .0241053
+              weekday_dummy_6 |   .0085343    .001052     8.11   0.000     .0064723    .0105963
+              weekday_dummy_7 |  -.0014037   .0008446    -1.66   0.096     -.003059    .0002516
+-----------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F( 16,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  8,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_exposure_bin_4:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+-----------------------------------------------------------------------------------------------
+                              |               Robust
+          pm25_exposure_bin_4 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+------------------------------+----------------------------------------------------------------
+inversion_exposure_bin_labels |  -.0002136   .0001376    -1.55   0.120    -.0004833     .000056
+     inversion_exposure_bin_1 |  -.0000639   .0015153    -0.04   0.966    -.0030338     .002906
+     inversion_exposure_bin_2 |   .0028851          .        .       .            .           .
+     inversion_exposure_bin_3 |  -.0002173   .0017313    -0.13   0.900    -.0036106     .003176
+     inversion_exposure_bin_4 |   .0025387    .001644     1.54   0.123    -.0006835     .005761
+     inversion_exposure_bin_5 |   .0006862   .0016312     0.42   0.674    -.0025108    .0038832
+     inversion_exposure_bin_6 |   .0024494   .0015929     1.54   0.124    -.0006727    .0055715
+     inversion_exposure_bin_7 |     .00773    .001589     4.86   0.000     .0046156    .0108443
+     inversion_exposure_bin_8 |     .00978   .0016492     5.93   0.000     .0065476    .0130123
+     inversion_exposure_bin_9 |   .0170828   .0022465     7.60   0.000     .0126798    .0214858
+    inversion_exposure_bin_10 |   .0145609   .0016111     9.04   0.000     .0114032    .0177186
+    inversion_exposure_bin_11 |   .0033926   .0016497     2.06   0.040     .0001593     .006626
+    inversion_exposure_bin_12 |    .003892   .0016345     2.38   0.017     .0006883    .0070957
+    inversion_exposure_bin_13 |   .0046899   .0019046     2.46   0.014     .0009569     .008423
+    inversion_exposure_bin_14 |    .003531   .0016583     2.13   0.033     .0002808    .0067811
+    inversion_exposure_bin_15 |   .0075163   .0021642     3.47   0.001     .0032745    .0117582
+    inversion_exposure_bin_16 |          0  (omitted)
+          pm25_exposure_bin_9 |  -.1077259   .0006445  -167.14   0.000    -.1089891   -.1064626
+             mean_temperature |   -.001073   .0000959   -11.19   0.000     -.001261    -.000885
+           mean_precipitation |   .0010424   .0000623    16.72   0.000     .0009202    .0011646
+                   employment |   6.30e-06   1.31e-06     4.82   0.000     3.73e-06    8.86e-06
+              weekday_dummy_2 |    .006282   .0009663     6.50   0.000     .0043881    .0081759
+              weekday_dummy_3 |   .0031101   .0009693     3.21   0.001     .0012102    .0050099
+              weekday_dummy_4 |   .0045205   .0009533     4.74   0.000     .0026521    .0063889
+              weekday_dummy_5 |   .0047151   .0010894     4.33   0.000       .00258    .0068502
+              weekday_dummy_6 |   .0062409     .00107     5.83   0.000     .0041438     .008338
+              weekday_dummy_7 |  -.0083396   .0008821    -9.45   0.000    -.0100684   -.0066107
+-----------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F( 16,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  8,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_exposure_bin_5:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+-----------------------------------------------------------------------------------------------
+                              |               Robust
+          pm25_exposure_bin_5 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+------------------------------+----------------------------------------------------------------
+inversion_exposure_bin_labels |     .00006   .0001308     0.46   0.647    -.0001963    .0003163
+     inversion_exposure_bin_1 |    .000265   .0014642     0.18   0.856    -.0026047    .0031348
+     inversion_exposure_bin_2 |    .001644          .        .       .            .           .
+     inversion_exposure_bin_3 |   .0028301    .001729     1.64   0.102    -.0005588    .0062189
+     inversion_exposure_bin_4 |   .0030194   .0016508     1.83   0.067    -.0002161    .0062549
+     inversion_exposure_bin_5 |   .0039727   .0016279     2.44   0.015      .000782    .0071633
+     inversion_exposure_bin_6 |   .0045184   .0015739     2.87   0.004     .0014335    .0076033
+     inversion_exposure_bin_7 |   .0102347   .0016935     6.04   0.000     .0069154     .013554
+     inversion_exposure_bin_8 |   .0088617   .0015862     5.59   0.000     .0057528    .0119706
+     inversion_exposure_bin_9 |   .0132251   .0020652     6.40   0.000     .0091773    .0172728
+    inversion_exposure_bin_10 |   .0114439   .0015504     7.38   0.000     .0084051    .0144827
+    inversion_exposure_bin_11 |    .004219   .0016173     2.61   0.009     .0010492    .0073889
+    inversion_exposure_bin_12 |   .0035453    .001685     2.10   0.035     .0002428    .0068478
+    inversion_exposure_bin_13 |   .0011941   .0018327     0.65   0.515     -.002398    .0047862
+    inversion_exposure_bin_14 |   .0089883   .0016229     5.54   0.000     .0058075    .0121692
+    inversion_exposure_bin_15 |   .0041634     .00208     2.00   0.045     .0000866    .0082402
+    inversion_exposure_bin_16 |          0  (omitted)
+          pm25_exposure_bin_9 |  -.1220986   .0005331  -229.04   0.000    -.1231435   -.1210538
+             mean_temperature |  -.0002966   .0000898    -3.30   0.001    -.0004727   -.0001206
+           mean_precipitation |   .0004083   .0000574     7.12   0.000     .0002958    .0005207
+                   employment |   3.49e-06   1.10e-06     3.17   0.002     1.33e-06    5.64e-06
+              weekday_dummy_2 |   .0005773     .00103     0.56   0.575    -.0014414     .002596
+              weekday_dummy_3 |   .0058725   .0010354     5.67   0.000     .0038431    .0079018
+              weekday_dummy_4 |  -.0013771   .0009966    -1.38   0.167    -.0033304    .0005763
+              weekday_dummy_5 |  -.0053649   .0010508    -5.11   0.000    -.0074244   -.0033054
+              weekday_dummy_6 |   .0028501   .0010797     2.64   0.008      .000734    .0049663
+              weekday_dummy_7 |  -.0107028   .0009433   -11.35   0.000    -.0125516    -.008854
+-----------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F( 16,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  8,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_exposure_bin_6:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+-----------------------------------------------------------------------------------------------
+                              |               Robust
+          pm25_exposure_bin_6 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+------------------------------+----------------------------------------------------------------
+inversion_exposure_bin_labels |  -.0018953   .0001282   -14.79   0.000    -.0021465   -.0016441
+     inversion_exposure_bin_1 |  -.0104589   .0014485    -7.22   0.000    -.0132979   -.0076199
+     inversion_exposure_bin_2 |  -.0089095          .        .       .            .           .
+     inversion_exposure_bin_3 |  -.0019822   .0017317    -1.14   0.252    -.0053763    .0014119
+     inversion_exposure_bin_4 |  -.0037274    .001617    -2.31   0.021    -.0068966   -.0005582
+     inversion_exposure_bin_5 |  -.0005365   .0016191    -0.33   0.740    -.0037098    .0026369
+     inversion_exposure_bin_6 |    .004743   .0015303     3.10   0.002     .0017436    .0077424
+     inversion_exposure_bin_7 |   .0044648   .0016027     2.79   0.005     .0013235    .0076061
+     inversion_exposure_bin_8 |   .0120614   .0015193     7.94   0.000     .0090836    .0150392
+     inversion_exposure_bin_9 |   .0119556   .0020098     5.95   0.000     .0080165    .0158946
+    inversion_exposure_bin_10 |   .0155833   .0014112    11.04   0.000     .0128174    .0183491
+    inversion_exposure_bin_11 |   .0161494   .0015629    10.33   0.000     .0130862    .0192126
+    inversion_exposure_bin_12 |   .0195198   .0016267    12.00   0.000     .0163315    .0227081
+    inversion_exposure_bin_13 |   .0171339   .0018405     9.31   0.000     .0135265    .0207412
+    inversion_exposure_bin_14 |   .0202474   .0015505    13.06   0.000     .0172085    .0232863
+    inversion_exposure_bin_15 |   .0115634     .00202     5.72   0.000     .0076043    .0155226
+    inversion_exposure_bin_16 |          0  (omitted)
+          pm25_exposure_bin_9 |  -.1335538   .0005531  -241.48   0.000    -.1346378   -.1324698
+             mean_temperature |   .0014286   .0000663    21.54   0.000     .0012986    .0015586
+           mean_precipitation |  -.0006695    .000049   -13.66   0.000    -.0007656   -.0005735
+                   employment |   2.51e-06   9.74e-07     2.57   0.010     5.97e-07    4.41e-06
+              weekday_dummy_2 |  -.0011845   .0010163    -1.17   0.244    -.0031764    .0008073
+              weekday_dummy_3 |   .0014011   .0010171     1.38   0.168    -.0005924    .0033946
+              weekday_dummy_4 |  -.0012985    .000995    -1.30   0.192    -.0032487    .0006517
+              weekday_dummy_5 |  -.0040434   .0010206    -3.96   0.000    -.0060438   -.0020429
+              weekday_dummy_6 |   .0032238   .0010778     2.99   0.003     .0011114    .0053362
+              weekday_dummy_7 |   .0050601   .0010376     4.88   0.000     .0030265    .0070937
+-----------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F( 16,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  8,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_exposure_bin_7:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+-----------------------------------------------------------------------------------------------
+                              |               Robust
+          pm25_exposure_bin_7 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+------------------------------+----------------------------------------------------------------
+inversion_exposure_bin_labels |  -.0014478   .0001325   -10.93   0.000    -.0017076   -.0011881
+     inversion_exposure_bin_1 |  -.0083424   .0014702    -5.67   0.000     -.011224   -.0054608
+     inversion_exposure_bin_2 |  -.0051928          .        .       .            .           .
+     inversion_exposure_bin_3 |  -.0060128   .0017196    -3.50   0.000    -.0093831   -.0026425
+     inversion_exposure_bin_4 |  -.0044067   .0016509    -2.67   0.008    -.0076424    -.001171
+     inversion_exposure_bin_5 |  -.0044879   .0015927    -2.82   0.005    -.0076095   -.0013663
+     inversion_exposure_bin_6 |  -.0018732   .0015143    -1.24   0.216    -.0048412    .0010948
+     inversion_exposure_bin_7 |    .000196   .0015638     0.13   0.900     -.002869     .003261
+     inversion_exposure_bin_8 |   .0058369    .001528     3.82   0.000     .0028422    .0088317
+     inversion_exposure_bin_9 |   .0075916   .0019108     3.97   0.000     .0038465    .0113368
+    inversion_exposure_bin_10 |   .0118368   .0014021     8.44   0.000     .0090886    .0145849
+    inversion_exposure_bin_11 |   .0060279   .0015873     3.80   0.000     .0029168     .009139
+    inversion_exposure_bin_12 |   .0146406   .0016871     8.68   0.000      .011334    .0179472
+    inversion_exposure_bin_13 |     .01496    .001867     8.01   0.000     .0113008    .0186193
+    inversion_exposure_bin_14 |   .0145816   .0016686     8.74   0.000     .0113112     .017852
+    inversion_exposure_bin_15 |   .0080039   .0021223     3.77   0.000     .0038442    .0121636
+    inversion_exposure_bin_16 |          0  (omitted)
+          pm25_exposure_bin_9 |  -.1436736   .0006835  -210.19   0.000    -.1450133   -.1423339
+             mean_temperature |    .002064   .0000671    30.78   0.000     .0019326    .0021954
+           mean_precipitation |   -.001872   .0000434   -43.12   0.000    -.0019571   -.0017869
+                   employment |   7.80e-07   1.27e-06     0.61   0.539    -1.71e-06    3.27e-06
+              weekday_dummy_2 |   .0034882    .000995     3.51   0.000     .0015381    .0054383
+              weekday_dummy_3 |  -.0000331   .0010193    -0.03   0.974     -.002031    .0019648
+              weekday_dummy_4 |   .0060169   .0010738     5.60   0.000     .0039122    .0081216
+              weekday_dummy_5 |  -.0023194   .0010714    -2.16   0.030    -.0044192   -.0002195
+              weekday_dummy_6 |  -.0020913   .0010795    -1.94   0.053    -.0042072    .0000245
+              weekday_dummy_7 |    .014995   .0011081    13.53   0.000     .0128232    .0171668
+-----------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F( 16,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  8,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_exposure_bin_8:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+-----------------------------------------------------------------------------------------------
+                              |               Robust
+          pm25_exposure_bin_8 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+------------------------------+----------------------------------------------------------------
+inversion_exposure_bin_labels |  -.0002769   .0001473    -1.88   0.060    -.0005656    .0000119
+     inversion_exposure_bin_1 |  -.0044987   .0015022    -2.99   0.003    -.0074431   -.0015544
+     inversion_exposure_bin_2 |  -.0059313          .        .       .            .           .
+     inversion_exposure_bin_3 |  -.0097522   .0016716    -5.83   0.000    -.0130285    -.006476
+     inversion_exposure_bin_4 |  -.0070961   .0016401    -4.33   0.000    -.0103106   -.0038817
+     inversion_exposure_bin_5 |  -.0020701   .0015895    -1.30   0.193    -.0051854    .0010453
+     inversion_exposure_bin_6 |  -.0005218   .0016022    -0.33   0.745    -.0036621    .0026186
+     inversion_exposure_bin_7 |   .0012178   .0015966     0.76   0.446    -.0019115    .0043471
+     inversion_exposure_bin_8 |   .0007555   .0015458     0.49   0.625    -.0022743    .0037852
+     inversion_exposure_bin_9 |   .0005049   .0019479     0.26   0.795    -.0033129    .0043227
+    inversion_exposure_bin_10 |   .0048748   .0015316     3.18   0.001      .001873    .0078767
+    inversion_exposure_bin_11 |   .0097195   .0016314     5.96   0.000      .006522     .012917
+    inversion_exposure_bin_12 |   .0123841   .0017162     7.22   0.000     .0090205    .0157477
+    inversion_exposure_bin_13 |   .0083638   .0019911     4.20   0.000     .0044613    .0122663
+    inversion_exposure_bin_14 |   .0100423   .0017996     5.58   0.000     .0065151    .0135695
+    inversion_exposure_bin_15 |    .002884   .0023699     1.22   0.224     -.001761     .007529
+    inversion_exposure_bin_16 |          0  (omitted)
+          pm25_exposure_bin_9 |  -.1547131   .0008441  -183.29   0.000    -.1563675   -.1530587
+             mean_temperature |   .0026407   .0000728    36.29   0.000      .002498    .0027833
+           mean_precipitation |  -.0027331   .0000424   -64.49   0.000    -.0028162     -.00265
+                   employment |  -3.28e-06   1.39e-06    -2.36   0.018    -6.01e-06   -5.56e-07
+              weekday_dummy_2 |  -.0009833   .0009361    -1.05   0.294    -.0028181    .0008514
+              weekday_dummy_3 |   -.005909    .000959    -6.16   0.000    -.0077887   -.0040294
+              weekday_dummy_4 |  -.0042218   .0009807    -4.30   0.000     -.006144   -.0022997
+              weekday_dummy_5 |  -.0133871   .0009788   -13.68   0.000    -.0153054   -.0114688
+              weekday_dummy_6 |   .0023598   .0010484     2.25   0.024      .000305    .0044146
+              weekday_dummy_7 |   .0182199   .0010027    18.17   0.000     .0162546    .0201852
+-----------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F( 16,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  8,  3100) =        .
+  Prob > F      =        .
+
+
+
+Summary results for first-stage regressions
+-------------------------------------------
+
+                                           (Underid)            (Weak id)
+Variable     | F( 16,  3100)  P-val | SW Chi-sq(  8) P-val | SW F(  8,  3100)
+pm25_exposur |          .         . |           .        . |           .
+pm25_exposur |          .         . |           .        . |           .
+pm25_exposur |          .         . |           .        . |           .
+pm25_exposur |          .         . |           .        . |           .
+pm25_exposur |          .         . |           .        . |           .
+pm25_exposur |          .         . |           .        . |           .
+pm25_exposur |          .         . |           .        . |           .
+pm25_exposur |          .         . |           .        . |           .
+pm25_exposur |          .         . |           .        . |           .
+
+NB: first-stage test statistics cluster-robust
+
+Stock-Yogo weak ID F test critical values for single endogenous regressor:
+                                    5% maximal IV relative bias    21.28
+                                   10% maximal IV relative bias    11.50
+                                   20% maximal IV relative bias     6.39
+                                   30% maximal IV relative bias     4.59
+                                   10% maximal IV size             52.77
+                                   15% maximal IV size             27.99
+                                   20% maximal IV size             19.51
+                                   25% maximal IV size             15.19
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for i.i.d. errors only.
+
+Warning: Error in calculating first-stage id statistics above;
+         dof of SW statistics is 8, should be L-(K-1)=..
+Underidentification test
+Ho: matrix of reduced form coefficients has rank=K1-1 (underidentified)
+Ha: matrix has rank=K1 (identified)
+Kleibergen-Paap rk LM statistic          Chi-sq(.)=.        P-val=     .
+
+Weak identification test
+Ho: equation is weakly identified
+Cragg-Donald Wald F statistic                                          .
+Kleibergen-Paap Wald rk F statistic                                    .
+
+Stock-Yogo weak ID test critical values for K1=9 and L1=16:
+                                                               <not available>
+
+Weak-instrument-robust inference
+Tests of joint significance of endogenous regressors B1 in main equation
+Ho: B1=0 and orthogonality conditions are valid
+Anderson-Rubin Wald test           F(16,3100)=        .     P-val=     .
+Anderson-Rubin Wald test           Chi-sq(16)=        .     P-val=     .
+Stock-Wright LM S statistic        Chi-sq(16)=    25.09     P-val=0.0682
+
+NB: Underidentification, weak identification and weak-identification-robust
+    test statistics cluster-robust
+
+Number of clusters             N_clust  =       3101
+Number of observations               N  =    1131865
+Number of regressors                 K  =         18
+Number of endogenous regressors      K1 =          9
+Number of instruments                L  =         25
+Number of excluded instruments       L1 =         16
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on fips
+
+Number of clusters (fips) =       3101                Number of obs =  1131865
+                                                      F( 18,  3100) =  8572.31
+                                                      Prob > F      =   0.0000
+Total (centered) SS     =  1482.928421                Centered R2   =  -0.0930
+Total (uncentered) SS   =  1482.928421                Uncentered R2 =  -0.0930
+Residual SS             =  1620.823053                Root MSE      =   .03784
+
+------------------------------------------------------------------------------------------
+                         |               Robust
+       accident_occurred |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------------------+----------------------------------------------------------------
+pm25_exposure_bin_labels |    .002955   .0017071     1.73   0.084    -.0003921    .0063022
+     pm25_exposure_bin_1 |   .0202327   .0154961     1.31   0.192     -.010151    .0506163
+     pm25_exposure_bin_2 |          0   .0247164     0.00   1.000    -.0484622    .0484622
+     pm25_exposure_bin_3 |   .0314006    .021946     1.43   0.153    -.0116296    .0744308
+     pm25_exposure_bin_4 |  -.0005201   .0258627    -0.02   0.984    -.0512297    .0501896
+     pm25_exposure_bin_5 |   .0049057   .0327696     0.15   0.881    -.0593467     .069158
+     pm25_exposure_bin_6 |   .0245875   .0229424     1.07   0.284    -.0203963    .0695713
+     pm25_exposure_bin_7 |  -.0009039   .0293149    -0.03   0.975    -.0583824    .0565746
+     pm25_exposure_bin_8 |  -.0098412   .0161659    -0.61   0.543    -.0415381    .0218557
+    pm25_exposure_bin_10 |          0  (omitted)
+     pm25_exposure_bin_9 |   -.002769   .0089493    -0.31   0.757    -.0203162    .0147783
+        mean_temperature |  -.0000848   .0000993    -0.85   0.393    -.0002794    .0001099
+      mean_precipitation |   .0000157   .0000983     0.16   0.873    -.0001771    .0002085
+              employment |   5.14e-07   6.19e-07     0.83   0.407    -7.00e-07    1.73e-06
+         weekday_dummy_2 |   .0015428   .0002412     6.40   0.000     .0010699    .0020158
+         weekday_dummy_3 |   .0016045    .000239     6.71   0.000      .001136    .0020731
+         weekday_dummy_4 |   .0017248   .0003052     5.65   0.000     .0011264    .0023231
+         weekday_dummy_5 |   .0014875   .0003306     4.50   0.000     .0008392    .0021357
+         weekday_dummy_6 |   .0014605   .0002833     5.16   0.000      .000905    .0020159
+         weekday_dummy_7 |   .0004908   .0004046     1.21   0.225    -.0003026    .0012842
+------------------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):                  .
+                                                   Chi-sq(.) P-val =         .
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):                    .
+                         (Kleibergen-Paap rk Wald F statistic):              .
+Stock-Yogo weak ID test critical values:                       <not available>
+------------------------------------------------------------------------------
+Warning: estimated covariance matrix of moment conditions not of full rank.
+         overidentification statistic not reported, and standard errors and
+         model tests should be interpreted with caution.
+Possible causes:
+         number of clusters insufficient to calculate robust covariance matrix
+         singleton dummy variable (dummy with one 1 and N-1 0s or vice versa)
+partial option may address problem.
+------------------------------------------------------------------------------
+Collinearities detected among instruments: 1 instrument(s) dropped
+Instrumented:         pm25_exposure_bin_labels pm25_exposure_bin_1
+                      pm25_exposure_bin_2 pm25_exposure_bin_3
+                      pm25_exposure_bin_4 pm25_exposure_bin_5
+                      pm25_exposure_bin_6 pm25_exposure_bin_7
+                      pm25_exposure_bin_8
+Included instruments: pm25_exposure_bin_9 mean_temperature mean_precipitation
+                      employment weekday_dummy_2 weekday_dummy_3 weekday_dummy_4
+                      weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
+Excluded instruments: inversion_exposure_bin_labels inversion_exposure_bin_1
+                      inversion_exposure_bin_2 inversion_exposure_bin_3
+                      inversion_exposure_bin_4 inversion_exposure_bin_5
+                      inversion_exposure_bin_6 inversion_exposure_bin_7
+                      inversion_exposure_bin_8 inversion_exposure_bin_9
+                      inversion_exposure_bin_10 inversion_exposure_bin_11
+                      inversion_exposure_bin_12 inversion_exposure_bin_13
+                      inversion_exposure_bin_14 inversion_exposure_bin_15
+Partialled-out:       _cons
+                      nb: total SS, model F and R2s are after partialling-out;
+                          any small-sample adjustments include partialled-out
+                          variables in regressor count K
+Dropped collinear:    pm25_exposure_bin_10 inversion_exposure_bin_16
+                      pm25_exposure_bin_8
+Reclassified as exog: pm25_exposure_bin_9
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+        fips |      3101        3101           0    *|
+       month |        12           1          11     |
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+(est1 stored)
+
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_shock_bin_* = inversion_shock_bin_*), absorb(fips month) clust
+> er(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_shock_bin_9
+Warning - collinearities detected
+Vars dropped:       pm25_shock_bin_10 inversion_shock_bin_9 pm25_shock_bin_8
+(MWFE estimator converged in 2 iterations)
+
+Unable to store first-stage regression of pm25_shock_bin_labels.
+
+
+First-stage regressions
+-----------------------
+
+Unable to display all first-stage regressions.
+There may be insufficient room to store results using -estimates store-,
+or names of endogenous regressors may be too long to store the results.
+Try dropping one or more estimation results using -estimates drop-,
+using the -savefprefix- option, or using shorter variable names.
+
+
+First-stage regression of pm25_shock_bin_1:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_1 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |  -.0019201   .0001396   -13.75   0.000    -.0021937   -.0016465
+     inversion_shock_bin_1 |  -.0208764          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0179833   .0011468   -15.68   0.000    -.0202309   -.0157357
+     inversion_shock_bin_3 |  -.0158511   .0011503   -13.78   0.000    -.0181057   -.0135965
+     inversion_shock_bin_4 |  -.0124328   .0011155   -11.15   0.000    -.0146191   -.0102466
+     inversion_shock_bin_5 |  -.0023086   .0009401    -2.46   0.014    -.0041512   -.0004661
+     inversion_shock_bin_6 |  -.0088345    .001069    -8.26   0.000    -.0109296   -.0067393
+     inversion_shock_bin_7 |  -.0054128   .0011115    -4.87   0.000    -.0075912   -.0032343
+     inversion_shock_bin_8 |  -.0002442   .0011614    -0.21   0.833    -.0025206    .0020322
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1201352   .0008452  -142.13   0.000    -.1217918   -.1184786
+          mean_temperature |   .0040137   .0000774    51.89   0.000     .0038621    .0041653
+        mean_precipitation |    .005842   .0000871    67.08   0.000     .0056714    .0060127
+                employment |  -5.88e-06   1.33e-06    -4.44   0.000    -8.48e-06   -3.29e-06
+           weekday_dummy_2 |  -.0004062   .0010172    -0.40   0.690    -.0023999    .0015875
+           weekday_dummy_3 |  -.0152278   .0010304   -14.78   0.000    -.0172474   -.0132082
+           weekday_dummy_4 |  -.0225148   .0010074   -22.35   0.000    -.0244892   -.0205403
+           weekday_dummy_5 |   .0033664   .0008756     3.84   0.000     .0016502    .0050826
+           weekday_dummy_6 |  -.0169278   .0009773   -17.32   0.000    -.0188433   -.0150124
+           weekday_dummy_7 |   -.017491   .0008494   -20.59   0.000    -.0191559   -.0158262
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_2:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_2 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0001636   .0001488     1.10   0.271     -.000128    .0004553
+     inversion_shock_bin_1 |   .0018185          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0007162   .0012117    -0.59   0.555    -.0030911    .0016588
+     inversion_shock_bin_3 |   .0007362   .0011344     0.65   0.516    -.0014872    .0029597
+     inversion_shock_bin_4 |  -.0002555   .0010826    -0.24   0.813    -.0023774    .0018665
+     inversion_shock_bin_5 |  -.0023331   .0009273    -2.52   0.012    -.0041505   -.0005156
+     inversion_shock_bin_6 |   .0004912   .0010918     0.45   0.653    -.0016488    .0026311
+     inversion_shock_bin_7 |   .0000677    .001136     0.06   0.953    -.0021588    .0022941
+     inversion_shock_bin_8 |   .0009914   .0011726     0.85   0.398    -.0013068    .0032897
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1182535   .0004098  -288.59   0.000    -.1190566   -.1174503
+          mean_temperature |   .0029439   .0000655    44.92   0.000     .0028154    .0030724
+        mean_precipitation |   .0037573    .000063    59.66   0.000     .0036338    .0038807
+                employment |  -3.87e-07   7.05e-07    -0.55   0.583    -1.77e-06    9.94e-07
+           weekday_dummy_2 |   -.005328   .0011157    -4.78   0.000    -.0075147   -.0031413
+           weekday_dummy_3 |  -.0056274    .001085    -5.19   0.000     -.007754   -.0035007
+           weekday_dummy_4 |  -.0095731   .0010864    -8.81   0.000    -.0117024   -.0074437
+           weekday_dummy_5 |  -.0051716   .0010718    -4.83   0.000    -.0072722    -.003071
+           weekday_dummy_6 |  -.0116814   .0010355   -11.28   0.000    -.0137109   -.0096518
+           weekday_dummy_7 |  -.0152109    .000967   -15.73   0.000    -.0171061   -.0133157
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_3:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_3 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |  -.0005075   .0001432    -3.54   0.000    -.0007882   -.0002267
+     inversion_shock_bin_1 |  -.0064419          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0043513   .0011863    -3.67   0.000    -.0066763   -.0020262
+     inversion_shock_bin_3 |  -.0047837   .0011143    -4.29   0.000    -.0069676   -.0025998
+     inversion_shock_bin_4 |  -.0001618   .0011402    -0.14   0.887    -.0023967     .002073
+     inversion_shock_bin_5 |  -.0012026   .0009487    -1.27   0.205     -.003062    .0006568
+     inversion_shock_bin_6 |   .0011911   .0011356     1.05   0.294    -.0010348    .0034169
+     inversion_shock_bin_7 |   .0006812   .0011791     0.58   0.563    -.0016298    .0029922
+     inversion_shock_bin_8 |  -.0010743   .0011982    -0.90   0.370    -.0034228    .0012742
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1105576   .0004069  -271.67   0.000    -.1113552     -.10976
+          mean_temperature |   .0007409   .0000714    10.37   0.000     .0006009     .000881
+        mean_precipitation |   .0020024   .0000547    36.62   0.000     .0018952    .0021095
+                employment |   1.01e-06   6.39e-07     1.58   0.115    -2.44e-07    2.26e-06
+           weekday_dummy_2 |  -.0072223   .0010668    -6.77   0.000    -.0093131   -.0051314
+           weekday_dummy_3 |  -.0054622    .001014    -5.39   0.000    -.0074497   -.0034747
+           weekday_dummy_4 |   .0005389   .0010413     0.52   0.605    -.0015019    .0025798
+           weekday_dummy_5 |  -.0050106   .0010731    -4.67   0.000    -.0071139   -.0029073
+           weekday_dummy_6 |  -.0088577   .0010039    -8.82   0.000    -.0108254     -.00689
+           weekday_dummy_7 |  -.0051575    .001002    -5.15   0.000    -.0071214   -.0031937
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_4:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_4 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |  -.0002107   .0001332    -1.58   0.114    -.0004717    .0000503
+     inversion_shock_bin_1 |   -.001779          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0022044   .0011946    -1.85   0.065    -.0045457     .000137
+     inversion_shock_bin_3 |   -.001876   .0011658    -1.61   0.108    -.0041609    .0004089
+     inversion_shock_bin_4 |  -.0016099   .0011756    -1.37   0.171     -.003914    .0006941
+     inversion_shock_bin_5 |  -.0008593   .0009176    -0.94   0.349    -.0026576    .0009391
+     inversion_shock_bin_6 |   .0022419   .0011585     1.94   0.053    -.0000287    .0045124
+     inversion_shock_bin_7 |   .0036114   .0011581     3.12   0.002     .0013417    .0058812
+     inversion_shock_bin_8 |    .000165   .0012335     0.13   0.894    -.0022527    .0025826
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |    -.09714   .0004885  -198.86   0.000    -.0980974   -.0961826
+          mean_temperature |  -.0008005    .000068   -11.76   0.000    -.0009339   -.0006671
+        mean_precipitation |   .0006158   .0000523    11.77   0.000     .0005133    .0007184
+                employment |   2.87e-06   8.90e-07     3.23   0.001     1.13e-06    4.61e-06
+           weekday_dummy_2 |  -.0053512   .0010662    -5.02   0.000    -.0074409   -.0032615
+           weekday_dummy_3 |  -.0053943   .0010549    -5.11   0.000    -.0074618   -.0033267
+           weekday_dummy_4 |   .0003927   .0010888     0.36   0.718    -.0017414    .0025268
+           weekday_dummy_5 |  -.0086645   .0010673    -8.12   0.000    -.0107564   -.0065725
+           weekday_dummy_6 |  -.0066995   .0010579    -6.33   0.000     -.008773   -.0046261
+           weekday_dummy_7 |   -.005846   .0010112    -5.78   0.000    -.0078278   -.0038642
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_5:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_5 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0007237   .0001316     5.50   0.000     .0004657    .0009817
+     inversion_shock_bin_1 |   .0093172          .        .       .            .           .
+     inversion_shock_bin_2 |   .0101716   .0011801     8.62   0.000     .0078586    .0124846
+     inversion_shock_bin_3 |   .0058937   .0011409     5.17   0.000     .0036577    .0081298
+     inversion_shock_bin_4 |   .0040259    .001177     3.42   0.001     .0017189    .0063329
+     inversion_shock_bin_5 |   .0054193   .0010999     4.93   0.000     .0032636    .0075751
+     inversion_shock_bin_6 |   .0021493   .0012141     1.77   0.077    -.0002302    .0045288
+     inversion_shock_bin_7 |   .0035991   .0011323     3.18   0.001     .0013797    .0058185
+     inversion_shock_bin_8 |   .0002437   .0011633     0.21   0.834    -.0020364    .0025238
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |   -.082121   .0005215  -157.48   0.000     -.083143   -.0810989
+          mean_temperature |  -.0009547   .0000727   -13.13   0.000    -.0010972   -.0008122
+        mean_precipitation |  -.0001123   .0000532    -2.11   0.035    -.0002166   -8.03e-06
+                employment |   2.28e-06   9.95e-07     2.29   0.022     3.28e-07    4.23e-06
+           weekday_dummy_2 |   .0046441   .0009676     4.80   0.000     .0027476    .0065406
+           weekday_dummy_3 |   .0001656   .0009604     0.17   0.863    -.0017167    .0020479
+           weekday_dummy_4 |     .00408   .0009688     4.21   0.000     .0021811    .0059789
+           weekday_dummy_5 |   .0007135   .0009803     0.73   0.467    -.0012079    .0026349
+           weekday_dummy_6 |   .0029002   .0009937     2.92   0.004     .0009525    .0048478
+           weekday_dummy_7 |  -.0033238   .0009958    -3.34   0.001    -.0052754   -.0013721
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_6:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_6 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0003902   .0001322     2.95   0.003      .000131    .0006494
+     inversion_shock_bin_1 |   .0051847          .        .       .            .           .
+     inversion_shock_bin_2 |   .0077302   .0011811     6.54   0.000     .0054153    .0100452
+     inversion_shock_bin_3 |    .003573   .0011027     3.24   0.001     .0014117    .0057343
+     inversion_shock_bin_4 |   .0016655   .0011642     1.43   0.153    -.0006163    .0039474
+     inversion_shock_bin_5 |  -.0008395    .000913    -0.92   0.358    -.0026289      .00095
+     inversion_shock_bin_6 |    .000288   .0011582     0.25   0.804     -.001982    .0025581
+     inversion_shock_bin_7 |    .001401   .0011467     1.22   0.222    -.0008464    .0036484
+     inversion_shock_bin_8 |   .0026949   .0011614     2.32   0.020     .0004185    .0049712
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.0909114   .0005423  -167.63   0.000    -.0919743   -.0898484
+          mean_temperature |  -.0014423    .000067   -21.54   0.000    -.0015735   -.0013111
+        mean_precipitation |  -.0016766   .0000435   -38.53   0.000    -.0017619   -.0015913
+                employment |   1.86e-06   6.86e-07     2.72   0.007     5.21e-07    3.21e-06
+           weekday_dummy_2 |    .007101   .0010064     7.06   0.000     .0051284    .0090736
+           weekday_dummy_3 |   .0079442   .0010165     7.82   0.000     .0059519    .0099366
+           weekday_dummy_4 |   .0067029   .0010682     6.28   0.000     .0046093    .0087965
+           weekday_dummy_5 |   .0074771   .0010676     7.00   0.000     .0053847    .0095695
+           weekday_dummy_6 |   .0056474   .0009753     5.79   0.000     .0037358    .0075589
+           weekday_dummy_7 |   .0038367   .0009855     3.89   0.000     .0019051    .0057683
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_7:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_7 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |    .001116   .0001417     7.88   0.000     .0008383    .0013936
+     inversion_shock_bin_1 |    .008061          .        .       .            .           .
+     inversion_shock_bin_2 |   .0078835   .0011807     6.68   0.000     .0055694    .0101975
+     inversion_shock_bin_3 |   .0045679   .0011545     3.96   0.000     .0023052    .0068305
+     inversion_shock_bin_4 |   .0025893    .001147     2.26   0.024     .0003411    .0048375
+     inversion_shock_bin_5 |  -.0029285   .0009547    -3.07   0.002    -.0047998   -.0010572
+     inversion_shock_bin_6 |  -.0000722    .001183    -0.06   0.951    -.0023907    .0022464
+     inversion_shock_bin_7 |  -.0029889   .0011528    -2.59   0.010    -.0052483   -.0007295
+     inversion_shock_bin_8 |  -.0014372   .0011871    -1.21   0.226    -.0037639    .0008895
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |   -.112433   .0005254  -213.99   0.000    -.1134628   -.1114032
+          mean_temperature |  -.0018925    .000067   -28.25   0.000    -.0020237   -.0017612
+        mean_precipitation |  -.0025155   .0000417   -60.39   0.000    -.0025971   -.0024339
+                employment |   1.13e-06   6.89e-07     1.64   0.100    -2.18e-07    2.48e-06
+           weekday_dummy_2 |   .0076705   .0010039     7.64   0.000     .0057029    .0096381
+           weekday_dummy_3 |   .0122441   .0010138    12.08   0.000     .0102571    .0142311
+           weekday_dummy_4 |   .0110436   .0010192    10.84   0.000      .009046    .0130413
+           weekday_dummy_5 |    .005776   .0009907     5.83   0.000     .0038343    .0077178
+           weekday_dummy_6 |   .0114848   .0009911    11.59   0.000     .0095422    .0134274
+           weekday_dummy_7 |   .0064393   .0009872     6.52   0.000     .0045045    .0083741
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_8:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_8 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0008935   .0001385     6.45   0.000      .000622    .0011649
+     inversion_shock_bin_1 |   .0060794          .        .       .            .           .
+     inversion_shock_bin_2 |   .0056506   .0011996     4.71   0.000     .0032996    .0080017
+     inversion_shock_bin_3 |   .0097314   .0011608     8.38   0.000     .0074563    .0120064
+     inversion_shock_bin_4 |   .0081328   .0011083     7.34   0.000     .0059606    .0103049
+     inversion_shock_bin_5 |   .0005631   .0009564     0.59   0.556    -.0013113    .0024376
+     inversion_shock_bin_6 |   .0051822   .0011496     4.51   0.000      .002929    .0074355
+     inversion_shock_bin_7 |   .0007648   .0011657     0.66   0.512    -.0015199    .0030494
+     inversion_shock_bin_8 |   .0016514   .0012468     1.32   0.185    -.0007923    .0040951
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1288953    .000483  -266.86   0.000     -.129842   -.1279486
+          mean_temperature |  -.0026337   .0000737   -35.72   0.000    -.0027782   -.0024892
+        mean_precipitation |  -.0031988   .0000373   -85.78   0.000    -.0032719   -.0031257
+                employment |   1.24e-06   7.56e-07     1.64   0.102    -2.44e-07    2.72e-06
+           weekday_dummy_2 |   .0055731   .0009785     5.70   0.000     .0036552     .007491
+           weekday_dummy_3 |   .0062283   .0010062     6.19   0.000     .0042561    .0082005
+           weekday_dummy_4 |   .0118239   .0010249    11.54   0.000     .0098151    .0138327
+           weekday_dummy_5 |   .0053824   .0010526     5.11   0.000     .0033194    .0074454
+           weekday_dummy_6 |   .0223959   .0010186    21.99   0.000     .0203994    .0243923
+           weekday_dummy_7 |   .0088918   .0010138     8.77   0.000     .0069048    .0108788
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+
+Summary results for first-stage regressions
+-------------------------------------------
+
+                                           (Underid)            (Weak id)
+Variable     | F(  9,  3100)  P-val | SW Chi-sq(  1) P-val | SW F(  1,  3100)
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+
+NB: first-stage test statistics cluster-robust
+
+Stock-Yogo weak ID F test critical values for single endogenous regressor:
+                                    5% maximal IV relative bias    20.53
+                                   10% maximal IV relative bias    11.46
+                                   20% maximal IV relative bias     6.65
+                                   30% maximal IV relative bias     4.92
+                                   10% maximal IV size             36.19
+                                   15% maximal IV size             19.71
+                                   20% maximal IV size             14.01
+                                   25% maximal IV size             11.07
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for i.i.d. errors only.
+
+Underidentification test
+Ho: matrix of reduced form coefficients has rank=K1-1 (underidentified)
+Ha: matrix has rank=K1 (identified)
+Kleibergen-Paap rk LM statistic          Chi-sq(1)=0.00     P-val=0.9577
+
+Weak identification test
+Ho: equation is weakly identified
+Cragg-Donald Wald F statistic                                       0.00
+Kleibergen-Paap Wald rk F statistic                                 0.00
+
+Stock-Yogo weak ID test critical values for K1=9 and L1=9:
+                                                               <not available>
+
+Weak-instrument-robust inference
+Tests of joint significance of endogenous regressors B1 in main equation
+Ho: B1=0 and orthogonality conditions are valid
+Anderson-Rubin Wald test           F(9,3100)=         .     P-val=     .
+Anderson-Rubin Wald test           Chi-sq(9)=         .     P-val=     .
+Stock-Wright LM S statistic        Chi-sq(9)=      4.25     P-val=0.8942
+
+NB: Underidentification, weak identification and weak-identification-robust
+    test statistics cluster-robust
+
+Number of clusters             N_clust  =       3101
+Number of observations               N  =    1128764
+Number of regressors                 K  =         18
+Number of endogenous regressors      K1 =          9
+Number of instruments                L  =         18
+Number of excluded instruments       L1 =          9
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on fips
+
+Number of clusters (fips) =       3101                Number of obs =  1128764
+                                                      F( 18,  3100) =  8.1e+11
+                                                      Prob > F      =   0.0000
+Total (centered) SS     =  1482.720626                Centered R2   =  -0.8778
+Total (uncentered) SS   =  1482.720626                Uncentered R2 =  -0.8778
+Residual SS             =  2784.237296                Root MSE      =   .04967
+
+---------------------------------------------------------------------------------------
+                      |               Robust
+    accident_occurred |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+----------------------+----------------------------------------------------------------
+pm25_shock_bin_labels |  -.0026076   .2240904    -0.01   0.991    -.4419883    .4367731
+     pm25_shock_bin_1 |   .0153103   1.300042     0.01   0.991     -2.53372    2.564341
+     pm25_shock_bin_2 |          0   .5262835     0.00   1.000      -1.0319      1.0319
+     pm25_shock_bin_3 |   -.005222   .6716392    -0.01   0.994    -1.322125    1.311681
+     pm25_shock_bin_4 |          0   1.895835     0.00   1.000    -3.717219    3.717219
+     pm25_shock_bin_5 |    .076922    1.24513     0.06   0.951    -2.364441    2.518285
+     pm25_shock_bin_6 |  -.0568461    1.36853    -0.04   0.967    -2.740162     2.62647
+     pm25_shock_bin_7 |   .0520187   .3802106     0.14   0.891    -.6934715    .7975089
+     pm25_shock_bin_8 |   .0267036   .4083875     0.07   0.948    -.7740339     .827441
+    pm25_shock_bin_10 |          0  (omitted)
+     pm25_shock_bin_9 |   .0214629    .475927     0.05   0.964    -.9117012    .9546269
+     mean_temperature |  -8.34e-06   .0064126    -0.00   0.999    -.0125817     .012565
+   mean_precipitation |  -.0001754   .0113909    -0.02   0.988    -.0225099    .0221592
+           employment |   3.90e-07   5.12e-07     0.76   0.447    -6.14e-07    1.39e-06
+      weekday_dummy_2 |   .0010698   .0017241     0.62   0.535    -.0023107    .0044504
+      weekday_dummy_3 |   .0019798   .0203189     0.10   0.922    -.0378601    .0418197
+      weekday_dummy_4 |   .0017067   .0182119     0.09   0.925    -.0340018    .0374152
+      weekday_dummy_5 |   .0016238   .0048593     0.33   0.738    -.0079041    .0111516
+      weekday_dummy_6 |   .0012445   .0168005     0.07   0.941    -.0316968    .0341858
+      weekday_dummy_7 |   .0014213   .0493119     0.03   0.977    -.0952659    .0981086
+---------------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):              0.003
+                                                   Chi-sq(1) P-val =    0.9577
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):                0.000
+                         (Kleibergen-Paap rk Wald F statistic):          0.000
+Stock-Yogo weak ID test critical values:                       <not available>
+------------------------------------------------------------------------------
+Warning: estimated covariance matrix of moment conditions not of full rank.
+         overidentification statistic not reported, and standard errors and
+         model tests should be interpreted with caution.
+Possible causes:
+         number of clusters insufficient to calculate robust covariance matrix
+         singleton dummy variable (dummy with one 1 and N-1 0s or vice versa)
+partial option may address problem.
+------------------------------------------------------------------------------
+Collinearities detected among instruments: 1 instrument(s) dropped
+Instrumented:         pm25_shock_bin_labels pm25_shock_bin_1 pm25_shock_bin_2
+                      pm25_shock_bin_3 pm25_shock_bin_4 pm25_shock_bin_5
+                      pm25_shock_bin_6 pm25_shock_bin_7 pm25_shock_bin_8
+Included instruments: pm25_shock_bin_9 mean_temperature mean_precipitation
+                      employment weekday_dummy_2 weekday_dummy_3 weekday_dummy_4
+                      weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
+Excluded instruments: inversion_shock_bin_labels inversion_shock_bin_1
+                      inversion_shock_bin_2 inversion_shock_bin_3
+                      inversion_shock_bin_4 inversion_shock_bin_5
+                      inversion_shock_bin_6 inversion_shock_bin_7
+                      inversion_shock_bin_8
+Partialled-out:       _cons
+                      nb: total SS, model F and R2s are after partialling-out;
+                          any small-sample adjustments include partialled-out
+                          variables in regressor count K
+Dropped collinear:    pm25_shock_bin_10 inversion_shock_bin_9 pm25_shock_bin_8
+Reclassified as exog: pm25_shock_bin_9
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+        fips |      3101        3101           0    *|
+       month |        12           1          11     |
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+(est2 stored)
+
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* pm_25_shock_bin_* = inversion_exposure_bin_* in
+> version_shock_bin_*), absorb(fips month) cluster(fips) first
+variable pm_25_shock_bin_* not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. egen pm25_shock_bin_labels = cut(pm25_shock), group(10)
+variable pm25_shock_bin_labels already defined
+r(110);
+
+end of do-file
+
+r(110);
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. gen pm25_shock = mean_pm25 - L.mean_pm25
+variable pm25_shock already defined
+r(110);
+
+end of do-file
+
+r(110);
+
+. drop pm25_shock_*
+
+. drop inversion_shock_*
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. gen pm25_shock = mean_pm25 - L.mean_pm25
+variable pm25_shock already defined
+r(110);
+
+end of do-file
+
+r(110);
+
+. drop pm25_shock
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. gen pm25_shock = mean_pm25 - L.mean_pm25
+(3,108 missing values generated)
+
+. gen inversion_shock = inversion_coverage - L.inversion_coverage
+variable inversion_shock already defined
+r(110);
+
+end of do-file
+
+r(110);
+
+. drop inversion_shock
+
+. drop pm25_shock
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. gen pm25_shock = mean_pm25 - L.mean_pm25
+(3,108 missing values generated)
+
+. gen inversion_shock = inversion_coverage - L.inversion_coverage
+(3,108 missing values generated)
+
+. egen pm25_shock_bin_labels = cut(pm25_shock), group(10)
+(3108 missing values generated)
+
+. egen inversion_shock_bin_labels = cut(inversion_shock), group(10)
+(3108 missing values generated)
+
+. 
+end of do-file
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. tabulate pm25_shock_bin_labels, generate(pm25_shock_bin_)
+
+pm25_shock_ |
+ bin_labels |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    113,131       10.00       10.00
+          1 |    113,131       10.00       20.00
+          2 |    113,131       10.00       30.00
+          3 |    113,131       10.00       40.00
+          4 |    113,132       10.00       50.00
+          5 |    113,131       10.00       60.00
+          6 |    113,131       10.00       70.00
+          7 |    113,131       10.00       80.00
+          8 |    113,131       10.00       90.00
+          9 |    113,132       10.00      100.00
+------------+-----------------------------------
+      Total |  1,131,312      100.00
+
+. tabulate inversion_shock_bin_labels, generate(inversion_shock_bin_)
+
+inversion_s |
+hock_bin_la |
+       bels |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |    113,131       10.00       10.00
+          1 |    113,131       10.00       20.00
+          2 |    113,131       10.00       30.00
+          3 |    111,501        9.86       39.86
+          5 |    227,893       20.14       60.00
+          6 |    113,131       10.00       70.00
+          7 |    113,131       10.00       80.00
+          8 |    113,131       10.00       90.00
+          9 |    113,132       10.00      100.00
+------------+-----------------------------------
+      Total |  1,131,312      100.00
+
+. 
+. 
+end of do-file
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_shock_bin_* = inversion_shock_bin_*), absorb(fips month) clust
+> er(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_shock_bin_9
+Warning - collinearities detected
+Vars dropped:       pm25_shock_bin_10 inversion_shock_bin_9 pm25_shock_bin_8
+(MWFE estimator converged in 2 iterations)
+
+Unable to store first-stage regression of pm25_shock_bin_labels.
+
+
+First-stage regressions
+-----------------------
+
+Unable to display all first-stage regressions.
+There may be insufficient room to store results using -estimates store-,
+or names of endogenous regressors may be too long to store the results.
+Try dropping one or more estimation results using -estimates drop-,
+using the -savefprefix- option, or using shorter variable names.
+
+
+First-stage regression of pm25_shock_bin_1:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_1 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |  -.0019201   .0001396   -13.75   0.000    -.0021937   -.0016465
+     inversion_shock_bin_1 |  -.0208764          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0179833   .0011468   -15.68   0.000    -.0202309   -.0157357
+     inversion_shock_bin_3 |  -.0158511   .0011503   -13.78   0.000    -.0181057   -.0135965
+     inversion_shock_bin_4 |  -.0124328   .0011155   -11.15   0.000    -.0146191   -.0102466
+     inversion_shock_bin_5 |  -.0023086   .0009401    -2.46   0.014    -.0041512   -.0004661
+     inversion_shock_bin_6 |  -.0088345    .001069    -8.26   0.000    -.0109296   -.0067393
+     inversion_shock_bin_7 |  -.0054128   .0011115    -4.87   0.000    -.0075912   -.0032343
+     inversion_shock_bin_8 |  -.0002442   .0011614    -0.21   0.833    -.0025206    .0020322
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1201352   .0008452  -142.13   0.000    -.1217918   -.1184786
+          mean_temperature |   .0040137   .0000774    51.89   0.000     .0038621    .0041653
+        mean_precipitation |    .005842   .0000871    67.08   0.000     .0056714    .0060127
+                employment |  -5.88e-06   1.33e-06    -4.44   0.000    -8.48e-06   -3.29e-06
+           weekday_dummy_2 |  -.0004062   .0010172    -0.40   0.690    -.0023999    .0015875
+           weekday_dummy_3 |  -.0152278   .0010304   -14.78   0.000    -.0172474   -.0132082
+           weekday_dummy_4 |  -.0225148   .0010074   -22.35   0.000    -.0244892   -.0205403
+           weekday_dummy_5 |   .0033664   .0008756     3.84   0.000     .0016502    .0050826
+           weekday_dummy_6 |  -.0169278   .0009773   -17.32   0.000    -.0188433   -.0150124
+           weekday_dummy_7 |   -.017491   .0008494   -20.59   0.000    -.0191559   -.0158262
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_2:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_2 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0001636   .0001488     1.10   0.271     -.000128    .0004553
+     inversion_shock_bin_1 |   .0018185          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0007162   .0012117    -0.59   0.555    -.0030911    .0016588
+     inversion_shock_bin_3 |   .0007362   .0011344     0.65   0.516    -.0014872    .0029597
+     inversion_shock_bin_4 |  -.0002555   .0010826    -0.24   0.813    -.0023774    .0018665
+     inversion_shock_bin_5 |  -.0023331   .0009273    -2.52   0.012    -.0041505   -.0005156
+     inversion_shock_bin_6 |   .0004912   .0010918     0.45   0.653    -.0016488    .0026311
+     inversion_shock_bin_7 |   .0000677    .001136     0.06   0.953    -.0021588    .0022941
+     inversion_shock_bin_8 |   .0009914   .0011726     0.85   0.398    -.0013068    .0032897
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1182535   .0004098  -288.59   0.000    -.1190566   -.1174503
+          mean_temperature |   .0029439   .0000655    44.92   0.000     .0028154    .0030724
+        mean_precipitation |   .0037573    .000063    59.66   0.000     .0036338    .0038807
+                employment |  -3.87e-07   7.05e-07    -0.55   0.583    -1.77e-06    9.94e-07
+           weekday_dummy_2 |   -.005328   .0011157    -4.78   0.000    -.0075147   -.0031413
+           weekday_dummy_3 |  -.0056274    .001085    -5.19   0.000     -.007754   -.0035007
+           weekday_dummy_4 |  -.0095731   .0010864    -8.81   0.000    -.0117024   -.0074437
+           weekday_dummy_5 |  -.0051716   .0010718    -4.83   0.000    -.0072722    -.003071
+           weekday_dummy_6 |  -.0116814   .0010355   -11.28   0.000    -.0137109   -.0096518
+           weekday_dummy_7 |  -.0152109    .000967   -15.73   0.000    -.0171061   -.0133157
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_3:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_3 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |  -.0005075   .0001432    -3.54   0.000    -.0007882   -.0002267
+     inversion_shock_bin_1 |  -.0064419          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0043513   .0011863    -3.67   0.000    -.0066763   -.0020262
+     inversion_shock_bin_3 |  -.0047837   .0011143    -4.29   0.000    -.0069676   -.0025998
+     inversion_shock_bin_4 |  -.0001618   .0011402    -0.14   0.887    -.0023967     .002073
+     inversion_shock_bin_5 |  -.0012026   .0009487    -1.27   0.205     -.003062    .0006568
+     inversion_shock_bin_6 |   .0011911   .0011356     1.05   0.294    -.0010348    .0034169
+     inversion_shock_bin_7 |   .0006812   .0011791     0.58   0.563    -.0016298    .0029922
+     inversion_shock_bin_8 |  -.0010743   .0011982    -0.90   0.370    -.0034228    .0012742
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1105576   .0004069  -271.67   0.000    -.1113552     -.10976
+          mean_temperature |   .0007409   .0000714    10.37   0.000     .0006009     .000881
+        mean_precipitation |   .0020024   .0000547    36.62   0.000     .0018952    .0021095
+                employment |   1.01e-06   6.39e-07     1.58   0.115    -2.44e-07    2.26e-06
+           weekday_dummy_2 |  -.0072223   .0010668    -6.77   0.000    -.0093131   -.0051314
+           weekday_dummy_3 |  -.0054622    .001014    -5.39   0.000    -.0074497   -.0034747
+           weekday_dummy_4 |   .0005389   .0010413     0.52   0.605    -.0015019    .0025798
+           weekday_dummy_5 |  -.0050106   .0010731    -4.67   0.000    -.0071139   -.0029073
+           weekday_dummy_6 |  -.0088577   .0010039    -8.82   0.000    -.0108254     -.00689
+           weekday_dummy_7 |  -.0051575    .001002    -5.15   0.000    -.0071214   -.0031937
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_4:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_4 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |  -.0002107   .0001332    -1.58   0.114    -.0004717    .0000503
+     inversion_shock_bin_1 |   -.001779          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0022044   .0011946    -1.85   0.065    -.0045457     .000137
+     inversion_shock_bin_3 |   -.001876   .0011658    -1.61   0.108    -.0041609    .0004089
+     inversion_shock_bin_4 |  -.0016099   .0011756    -1.37   0.171     -.003914    .0006941
+     inversion_shock_bin_5 |  -.0008593   .0009176    -0.94   0.349    -.0026576    .0009391
+     inversion_shock_bin_6 |   .0022419   .0011585     1.94   0.053    -.0000287    .0045124
+     inversion_shock_bin_7 |   .0036114   .0011581     3.12   0.002     .0013417    .0058812
+     inversion_shock_bin_8 |    .000165   .0012335     0.13   0.894    -.0022527    .0025826
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |    -.09714   .0004885  -198.86   0.000    -.0980974   -.0961826
+          mean_temperature |  -.0008005    .000068   -11.76   0.000    -.0009339   -.0006671
+        mean_precipitation |   .0006158   .0000523    11.77   0.000     .0005133    .0007184
+                employment |   2.87e-06   8.90e-07     3.23   0.001     1.13e-06    4.61e-06
+           weekday_dummy_2 |  -.0053512   .0010662    -5.02   0.000    -.0074409   -.0032615
+           weekday_dummy_3 |  -.0053943   .0010549    -5.11   0.000    -.0074618   -.0033267
+           weekday_dummy_4 |   .0003927   .0010888     0.36   0.718    -.0017414    .0025268
+           weekday_dummy_5 |  -.0086645   .0010673    -8.12   0.000    -.0107564   -.0065725
+           weekday_dummy_6 |  -.0066995   .0010579    -6.33   0.000     -.008773   -.0046261
+           weekday_dummy_7 |   -.005846   .0010112    -5.78   0.000    -.0078278   -.0038642
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_5:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_5 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0007237   .0001316     5.50   0.000     .0004657    .0009817
+     inversion_shock_bin_1 |   .0093172          .        .       .            .           .
+     inversion_shock_bin_2 |   .0101716   .0011801     8.62   0.000     .0078586    .0124846
+     inversion_shock_bin_3 |   .0058937   .0011409     5.17   0.000     .0036577    .0081298
+     inversion_shock_bin_4 |   .0040259    .001177     3.42   0.001     .0017189    .0063329
+     inversion_shock_bin_5 |   .0054193   .0010999     4.93   0.000     .0032636    .0075751
+     inversion_shock_bin_6 |   .0021493   .0012141     1.77   0.077    -.0002302    .0045288
+     inversion_shock_bin_7 |   .0035991   .0011323     3.18   0.001     .0013797    .0058185
+     inversion_shock_bin_8 |   .0002437   .0011633     0.21   0.834    -.0020364    .0025238
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |   -.082121   .0005215  -157.48   0.000     -.083143   -.0810989
+          mean_temperature |  -.0009547   .0000727   -13.13   0.000    -.0010972   -.0008122
+        mean_precipitation |  -.0001123   .0000532    -2.11   0.035    -.0002166   -8.03e-06
+                employment |   2.28e-06   9.95e-07     2.29   0.022     3.28e-07    4.23e-06
+           weekday_dummy_2 |   .0046441   .0009676     4.80   0.000     .0027476    .0065406
+           weekday_dummy_3 |   .0001656   .0009604     0.17   0.863    -.0017167    .0020479
+           weekday_dummy_4 |     .00408   .0009688     4.21   0.000     .0021811    .0059789
+           weekday_dummy_5 |   .0007135   .0009803     0.73   0.467    -.0012079    .0026349
+           weekday_dummy_6 |   .0029002   .0009937     2.92   0.004     .0009525    .0048478
+           weekday_dummy_7 |  -.0033238   .0009958    -3.34   0.001    -.0052754   -.0013721
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_6:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_6 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0003902   .0001322     2.95   0.003      .000131    .0006494
+     inversion_shock_bin_1 |   .0051847          .        .       .            .           .
+     inversion_shock_bin_2 |   .0077302   .0011811     6.54   0.000     .0054153    .0100452
+     inversion_shock_bin_3 |    .003573   .0011027     3.24   0.001     .0014117    .0057343
+     inversion_shock_bin_4 |   .0016655   .0011642     1.43   0.153    -.0006163    .0039474
+     inversion_shock_bin_5 |  -.0008395    .000913    -0.92   0.358    -.0026289      .00095
+     inversion_shock_bin_6 |    .000288   .0011582     0.25   0.804     -.001982    .0025581
+     inversion_shock_bin_7 |    .001401   .0011467     1.22   0.222    -.0008464    .0036484
+     inversion_shock_bin_8 |   .0026949   .0011614     2.32   0.020     .0004185    .0049712
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.0909114   .0005423  -167.63   0.000    -.0919743   -.0898484
+          mean_temperature |  -.0014423    .000067   -21.54   0.000    -.0015735   -.0013111
+        mean_precipitation |  -.0016766   .0000435   -38.53   0.000    -.0017619   -.0015913
+                employment |   1.86e-06   6.86e-07     2.72   0.007     5.21e-07    3.21e-06
+           weekday_dummy_2 |    .007101   .0010064     7.06   0.000     .0051284    .0090736
+           weekday_dummy_3 |   .0079442   .0010165     7.82   0.000     .0059519    .0099366
+           weekday_dummy_4 |   .0067029   .0010682     6.28   0.000     .0046093    .0087965
+           weekday_dummy_5 |   .0074771   .0010676     7.00   0.000     .0053847    .0095695
+           weekday_dummy_6 |   .0056474   .0009753     5.79   0.000     .0037358    .0075589
+           weekday_dummy_7 |   .0038367   .0009855     3.89   0.000     .0019051    .0057683
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_7:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_7 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |    .001116   .0001417     7.88   0.000     .0008383    .0013936
+     inversion_shock_bin_1 |    .008061          .        .       .            .           .
+     inversion_shock_bin_2 |   .0078835   .0011807     6.68   0.000     .0055694    .0101975
+     inversion_shock_bin_3 |   .0045679   .0011545     3.96   0.000     .0023052    .0068305
+     inversion_shock_bin_4 |   .0025893    .001147     2.26   0.024     .0003411    .0048375
+     inversion_shock_bin_5 |  -.0029285   .0009547    -3.07   0.002    -.0047998   -.0010572
+     inversion_shock_bin_6 |  -.0000722    .001183    -0.06   0.951    -.0023907    .0022464
+     inversion_shock_bin_7 |  -.0029889   .0011528    -2.59   0.010    -.0052483   -.0007295
+     inversion_shock_bin_8 |  -.0014372   .0011871    -1.21   0.226    -.0037639    .0008895
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |   -.112433   .0005254  -213.99   0.000    -.1134628   -.1114032
+          mean_temperature |  -.0018925    .000067   -28.25   0.000    -.0020237   -.0017612
+        mean_precipitation |  -.0025155   .0000417   -60.39   0.000    -.0025971   -.0024339
+                employment |   1.13e-06   6.89e-07     1.64   0.100    -2.18e-07    2.48e-06
+           weekday_dummy_2 |   .0076705   .0010039     7.64   0.000     .0057029    .0096381
+           weekday_dummy_3 |   .0122441   .0010138    12.08   0.000     .0102571    .0142311
+           weekday_dummy_4 |   .0110436   .0010192    10.84   0.000      .009046    .0130413
+           weekday_dummy_5 |    .005776   .0009907     5.83   0.000     .0038343    .0077178
+           weekday_dummy_6 |   .0114848   .0009911    11.59   0.000     .0095422    .0134274
+           weekday_dummy_7 |   .0064393   .0009872     6.52   0.000     .0045045    .0083741
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_8:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_8 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0008935   .0001385     6.45   0.000      .000622    .0011649
+     inversion_shock_bin_1 |   .0060794          .        .       .            .           .
+     inversion_shock_bin_2 |   .0056506   .0011996     4.71   0.000     .0032996    .0080017
+     inversion_shock_bin_3 |   .0097314   .0011608     8.38   0.000     .0074563    .0120064
+     inversion_shock_bin_4 |   .0081328   .0011083     7.34   0.000     .0059606    .0103049
+     inversion_shock_bin_5 |   .0005631   .0009564     0.59   0.556    -.0013113    .0024376
+     inversion_shock_bin_6 |   .0051822   .0011496     4.51   0.000      .002929    .0074355
+     inversion_shock_bin_7 |   .0007648   .0011657     0.66   0.512    -.0015199    .0030494
+     inversion_shock_bin_8 |   .0016514   .0012468     1.32   0.185    -.0007923    .0040951
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1288953    .000483  -266.86   0.000     -.129842   -.1279486
+          mean_temperature |  -.0026337   .0000737   -35.72   0.000    -.0027782   -.0024892
+        mean_precipitation |  -.0031988   .0000373   -85.78   0.000    -.0032719   -.0031257
+                employment |   1.24e-06   7.56e-07     1.64   0.102    -2.44e-07    2.72e-06
+           weekday_dummy_2 |   .0055731   .0009785     5.70   0.000     .0036552     .007491
+           weekday_dummy_3 |   .0062283   .0010062     6.19   0.000     .0042561    .0082005
+           weekday_dummy_4 |   .0118239   .0010249    11.54   0.000     .0098151    .0138327
+           weekday_dummy_5 |   .0053824   .0010526     5.11   0.000     .0033194    .0074454
+           weekday_dummy_6 |   .0223959   .0010186    21.99   0.000     .0203994    .0243923
+           weekday_dummy_7 |   .0088918   .0010138     8.77   0.000     .0069048    .0108788
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+
+Summary results for first-stage regressions
+-------------------------------------------
+
+                                           (Underid)            (Weak id)
+Variable     | F(  9,  3100)  P-val | SW Chi-sq(  1) P-val | SW F(  1,  3100)
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+
+NB: first-stage test statistics cluster-robust
+
+Stock-Yogo weak ID F test critical values for single endogenous regressor:
+                                    5% maximal IV relative bias    20.53
+                                   10% maximal IV relative bias    11.46
+                                   20% maximal IV relative bias     6.65
+                                   30% maximal IV relative bias     4.92
+                                   10% maximal IV size             36.19
+                                   15% maximal IV size             19.71
+                                   20% maximal IV size             14.01
+                                   25% maximal IV size             11.07
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for i.i.d. errors only.
+
+Underidentification test
+Ho: matrix of reduced form coefficients has rank=K1-1 (underidentified)
+Ha: matrix has rank=K1 (identified)
+Kleibergen-Paap rk LM statistic          Chi-sq(1)=0.00     P-val=0.9577
+
+Weak identification test
+Ho: equation is weakly identified
+Cragg-Donald Wald F statistic                                       0.00
+Kleibergen-Paap Wald rk F statistic                                 0.00
+
+Stock-Yogo weak ID test critical values for K1=9 and L1=9:
+                                                               <not available>
+
+Weak-instrument-robust inference
+Tests of joint significance of endogenous regressors B1 in main equation
+Ho: B1=0 and orthogonality conditions are valid
+Anderson-Rubin Wald test           F(9,3100)=         .     P-val=     .
+Anderson-Rubin Wald test           Chi-sq(9)=         .     P-val=     .
+Stock-Wright LM S statistic        Chi-sq(9)=      4.25     P-val=0.8942
+
+NB: Underidentification, weak identification and weak-identification-robust
+    test statistics cluster-robust
+
+Number of clusters             N_clust  =       3101
+Number of observations               N  =    1128764
+Number of regressors                 K  =         18
+Number of endogenous regressors      K1 =          9
+Number of instruments                L  =         18
+Number of excluded instruments       L1 =          9
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on fips
+
+Number of clusters (fips) =       3101                Number of obs =  1128764
+                                                      F( 18,  3100) =  8.1e+11
+                                                      Prob > F      =   0.0000
+Total (centered) SS     =  1482.720626                Centered R2   =  -0.8778
+Total (uncentered) SS   =  1482.720626                Uncentered R2 =  -0.8778
+Residual SS             =  2784.237296                Root MSE      =   .04967
+
+---------------------------------------------------------------------------------------
+                      |               Robust
+    accident_occurred |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+----------------------+----------------------------------------------------------------
+pm25_shock_bin_labels |  -.0026076   .2240904    -0.01   0.991    -.4419883    .4367731
+     pm25_shock_bin_1 |   .0153103   1.300042     0.01   0.991     -2.53372    2.564341
+     pm25_shock_bin_2 |          0   .5262835     0.00   1.000      -1.0319      1.0319
+     pm25_shock_bin_3 |   -.005222   .6716392    -0.01   0.994    -1.322125    1.311681
+     pm25_shock_bin_4 |          0   1.895835     0.00   1.000    -3.717219    3.717219
+     pm25_shock_bin_5 |    .076922    1.24513     0.06   0.951    -2.364441    2.518285
+     pm25_shock_bin_6 |  -.0568461    1.36853    -0.04   0.967    -2.740162     2.62647
+     pm25_shock_bin_7 |   .0520187   .3802106     0.14   0.891    -.6934715    .7975089
+     pm25_shock_bin_8 |   .0267036   .4083875     0.07   0.948    -.7740339     .827441
+    pm25_shock_bin_10 |          0  (omitted)
+     pm25_shock_bin_9 |   .0214629    .475927     0.05   0.964    -.9117012    .9546269
+     mean_temperature |  -8.34e-06   .0064126    -0.00   0.999    -.0125817     .012565
+   mean_precipitation |  -.0001754   .0113909    -0.02   0.988    -.0225099    .0221592
+           employment |   3.90e-07   5.12e-07     0.76   0.447    -6.14e-07    1.39e-06
+      weekday_dummy_2 |   .0010698   .0017241     0.62   0.535    -.0023107    .0044504
+      weekday_dummy_3 |   .0019798   .0203189     0.10   0.922    -.0378601    .0418197
+      weekday_dummy_4 |   .0017067   .0182119     0.09   0.925    -.0340018    .0374152
+      weekday_dummy_5 |   .0016238   .0048593     0.33   0.738    -.0079041    .0111516
+      weekday_dummy_6 |   .0012445   .0168005     0.07   0.941    -.0316968    .0341858
+      weekday_dummy_7 |   .0014213   .0493119     0.03   0.977    -.0952659    .0981086
+---------------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):              0.003
+                                                   Chi-sq(1) P-val =    0.9577
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):                0.000
+                         (Kleibergen-Paap rk Wald F statistic):          0.000
+Stock-Yogo weak ID test critical values:                       <not available>
+------------------------------------------------------------------------------
+Warning: estimated covariance matrix of moment conditions not of full rank.
+         overidentification statistic not reported, and standard errors and
+         model tests should be interpreted with caution.
+Possible causes:
+         number of clusters insufficient to calculate robust covariance matrix
+         singleton dummy variable (dummy with one 1 and N-1 0s or vice versa)
+partial option may address problem.
+------------------------------------------------------------------------------
+Collinearities detected among instruments: 1 instrument(s) dropped
+Instrumented:         pm25_shock_bin_labels pm25_shock_bin_1 pm25_shock_bin_2
+                      pm25_shock_bin_3 pm25_shock_bin_4 pm25_shock_bin_5
+                      pm25_shock_bin_6 pm25_shock_bin_7 pm25_shock_bin_8
+Included instruments: pm25_shock_bin_9 mean_temperature mean_precipitation
+                      employment weekday_dummy_2 weekday_dummy_3 weekday_dummy_4
+                      weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
+Excluded instruments: inversion_shock_bin_labels inversion_shock_bin_1
+                      inversion_shock_bin_2 inversion_shock_bin_3
+                      inversion_shock_bin_4 inversion_shock_bin_5
+                      inversion_shock_bin_6 inversion_shock_bin_7
+                      inversion_shock_bin_8
+Partialled-out:       _cons
+                      nb: total SS, model F and R2s are after partialling-out;
+                          any small-sample adjustments include partialled-out
+                          variables in regressor count K
+Dropped collinear:    pm25_shock_bin_10 inversion_shock_bin_9 pm25_shock_bin_8
+Reclassified as exog: pm25_shock_bin_9
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+        fips |      3101        3101           0    *|
+       month |        12           1          11     |
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+(est3 stored)
+
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* pm_25_shock_bin_* = inversion_exposure_bin_* in
+> version_shock_bin_*), absorb(fips month) cluster(fips) first
+variable pm_25_shock_bin_* not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* pm25_shock_bin_* = inversion_exposure_bin_* inv
+> ersion_shock_bin_*), absorb(fips month) cluster(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_exposure_bin_9
+Warning - collinearities detected
+Vars dropped:       pm25_exposure_bin_10 pm25_shock_bin_9 pm25_shock_bin_10
+                    inversion_exposure_bin_16 inversion_shock_bin_8
+                    inversion_shock_bin_9 pm25_exposure_bin_8
+(MWFE estimator converged in 2 iterations)
+matsize too small
+    You have attempted to create a matrix with too many rows or columns or attempted to fit a model with too many variables.  You need to increase matsize; it is
+    currently 400.  Use set matsize; see help matsize.
+
+    If you are using factor variables and included an interaction that has lots of missing cells, either increase matsize or set emptycells drop to reduce the required
+    matrix size; see help set emptycells.
+
+    If you are using factor variables, you might have accidentally treated a continuous variable as a categorical, resulting in lots of categories.  Use the c.
+    operator on such variables.
+r(908);
+
+end of do-file
+
+r(908);
+
+. set matsize 1000
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* pm25_shock_bin_* = inversion_exposure_bin_* inv
+> ersion_shock_bin_*), absorb(fips month) cluster(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_exposure_bin_9
+Warning - collinearities detected
+Vars dropped:       pm25_exposure_bin_10 pm25_shock_bin_9 pm25_shock_bin_10
+                    inversion_exposure_bin_16 inversion_shock_bin_8
+                    inversion_shock_bin_9 pm25_exposure_bin_8
+(MWFE estimator converged in 2 iterations)
+estimates post: matrix has missing values
+r(504);
+
+end of do-file
+
+r(504);
+
+. ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* pm25_shock_bin_* = inversion_exposure_bin_* inversion_s
+> hock_bin_*), absorb(fips month) cluster(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_exposure_bin_9
+Warning - collinearities detected
+Vars dropped:       pm25_exposure_bin_10 pm25_shock_bin_9 pm25_shock_bin_10
+                    inversion_exposure_bin_16 inversion_shock_bin_8
+                    inversion_shock_bin_9 pm25_exposure_bin_8
+(MWFE estimator converged in 2 iterations)
+estimates post: matrix has missing values
+r(504);
+
+. set emptycells drop
+
+. ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_exposure_bin_* pm25_shock_bin_* = inversion_exposure_bin_* inversion_s
+> hock_bin_*), absorb(fips month) cluster(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_exposure_bin_9
+Warning - collinearities detected
+Vars dropped:       pm25_exposure_bin_10 pm25_shock_bin_9 pm25_shock_bin_10
+                    inversion_exposure_bin_16 inversion_shock_bin_8
+                    inversion_shock_bin_9 pm25_exposure_bin_8
+(MWFE estimator converged in 2 iterations)
+estimates post: matrix has missing values
+r(504);
+
+. ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first if m
+> onth == 1
+option if not allowed
+r(198);
+
+. preserve
+
+. keep if month == 1
+(1,038,072 observations deleted)
+
+. ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
+note: variable #5 is probably collinear with the fixed effects (all partialled-out values are close to zero; tol = 1.0e-09)
+(MWFE estimator converged in 1 iterations)
+estimates post: matrix has missing values
+r(504);
+
+. restore
+
+. ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
+(MWFE estimator converged in 1 iterations)
+
+First-stage regressions
+-----------------------
+
+
+First-stage regression of mean_pm25:
+
+Statistics robust to heteroskedasticity and clustering on fips and date
+Number of obs =                1131865
+Number of clusters (fips) =       3101
+Number of clusters (date) =        365
+------------------------------------------------------------------------------------
+                   |               Robust
+         mean_pm25 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+inversion_coverage |    .720854   .3072032     2.35   0.019     .1187461    1.322962
+  mean_temperature |    .183724   .0191894     9.57   0.000     .1461133    .2213347
+mean_precipitation |    -.19043   .0109564   -17.38   0.000    -.2119041   -.1689559
+        employment |  -.0004813   .0001256    -3.83   0.000    -.0007274   -.0002351
+   weekday_dummy_2 |  -.1682197   .6407803    -0.26   0.793    -1.424127    1.087688
+   weekday_dummy_3 |  -.2046229     .63655    -0.32   0.748    -1.452239    1.042994
+   weekday_dummy_4 |  -.1125014    .630322    -0.18   0.858    -1.347911    1.122908
+   weekday_dummy_5 |  -.2605253   .6193213    -0.42   0.674    -1.474374    .9533235
+   weekday_dummy_6 |   -.050562   .6079714    -0.08   0.934    -1.242165    1.141041
+   weekday_dummy_7 |   .2172936   .6211856     0.35   0.726    -1.000209    1.434796
+------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  1,   364) =     5.51
+  Prob > F      =   0.0195
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,   364) =     5.51
+  Prob > F      =   0.0195
+
+
+
+Summary results for first-stage regressions
+-------------------------------------------
+
+                                           (Underid)            (Weak id)
+Variable     | F(  1,   364)  P-val | SW Chi-sq(  1) P-val | SW F(  1,   364)
+mean_pm25    |       5.51    0.0195 |        5.52   0.0188 |        5.51
+
+NB: first-stage test statistics cluster-robust
+
+Stock-Yogo weak ID F test critical values for single endogenous regressor:
+                                   10% maximal IV size             16.38
+                                   15% maximal IV size              8.96
+                                   20% maximal IV size              6.66
+                                   25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for i.i.d. errors only.
+
+Underidentification test
+Ho: matrix of reduced form coefficients has rank=K1-1 (underidentified)
+Ha: matrix has rank=K1 (identified)
+Kleibergen-Paap rk LM statistic          Chi-sq(1)=5.43     P-val=0.0198
+
+Weak identification test
+Ho: equation is weakly identified
+Cragg-Donald Wald F statistic                                    1699.36
+Kleibergen-Paap Wald rk F statistic                                 5.51
+
+Stock-Yogo weak ID test critical values for K1=1 and L1=1:
+                                   10% maximal IV size             16.38
+                                   15% maximal IV size              8.96
+                                   20% maximal IV size              6.66
+                                   25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
+
+Weak-instrument-robust inference
+Tests of joint significance of endogenous regressors B1 in main equation
+Ho: B1=0 and orthogonality conditions are valid
+Anderson-Rubin Wald test           F(1,364)=       0.02     P-val=0.8888
+Anderson-Rubin Wald test           Chi-sq(1)=      0.02     P-val=0.8886
+Stock-Wright LM S statistic        Chi-sq(1)=      0.02     P-val=0.8847
+
+NB: Underidentification, weak identification and weak-identification-robust
+    test statistics cluster-robust
+
+Number of clusters (1)         N_clust1 =       3101
+Number of clusters (2)         N_clust2 =        365
+Number of observations               N  =    1131865
+Number of regressors                 K  =         10
+Number of endogenous regressors      K1 =          1
+Number of instruments                L  =         10
+Number of excluded instruments       L1 =          1
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on fips and date
+
+Number of clusters (fips) =       3101                Number of obs =  1131865
+Number of clusters (date) =        365                F( 10,   364) =    10.91
+                                                      Prob > F      =   0.0000
+Total (centered) SS     =   1483.00274                Centered R2   =   0.0004
+Total (uncentered) SS   =   1483.00274                Uncentered R2 =   0.0004
+Residual SS             =   1482.44869                Root MSE      =   .03619
+
+------------------------------------------------------------------------------------
+                   |               Robust
+ accident_occurred |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+         mean_pm25 |   .0000196   .0001401     0.14   0.889     -.000256    .0002952
+  mean_temperature |   8.70e-06   .0000267     0.33   0.745    -.0000438    .0000612
+mean_precipitation |  -.0000164   .0000278    -0.59   0.555    -.0000711    .0000382
+        employment |   5.13e-07   6.29e-07     0.82   0.415    -7.24e-07    1.75e-06
+   weekday_dummy_2 |   .0014847   .0001958     7.58   0.000     .0010997    .0018696
+   weekday_dummy_3 |   .0016759    .000188     8.92   0.000     .0013063    .0020455
+   weekday_dummy_4 |   .0017371   .0002011     8.64   0.000     .0013417    .0021326
+   weekday_dummy_5 |   .0016838   .0001841     9.15   0.000     .0013218    .0020458
+   weekday_dummy_6 |   .0015352   .0001779     8.63   0.000     .0011854     .001885
+   weekday_dummy_7 |   .0004496   .0000867     5.18   0.000      .000279    .0006202
+------------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):              5.433
+                                                   Chi-sq(1) P-val =    0.0198
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):             1699.364
+                         (Kleibergen-Paap rk Wald F statistic):          5.506
+Stock-Yogo weak ID test critical values: 10% maximal IV size             16.38
+                                         15% maximal IV size              8.96
+                                         20% maximal IV size              6.66
+                                         25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
+------------------------------------------------------------------------------
+Hansen J statistic (overidentification test of all instruments):         0.000
+                                                 (equation exactly identified)
+------------------------------------------------------------------------------
+Instrumented:         mean_pm25
+Included instruments: mean_temperature mean_precipitation employment
+                      weekday_dummy_2 weekday_dummy_3 weekday_dummy_4
+                      weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
+Excluded instruments: inversion_coverage
+Partialled-out:       _cons
+                      nb: total SS, model F and R2s are after partialling-out;
+                          any small-sample adjustments include partialled-out
+                          variables in regressor count K
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+        fips |      3101        3101           0    *|
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+
+. preserve
+
+. keep if month == 1
+(1,038,072 observations deleted)
+
+. ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), absorb(fips) cluster(fips date) first
+note: variable #5 is probably collinear with the fixed effects (all partialled-out values are close to zero; tol = 1.0e-09)
+(MWFE estimator converged in 1 iterations)
+estimates post: matrix has missing values
+r(504);
+
+. restore
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (pm25_shock_bin_* = inversion_shock_bin_*), absorb(fips month) clust
+> er(fips) first
+Warning - endogenous variable(s) collinear with instruments
+Vars now exogenous: pm25_shock_bin_9
+Warning - collinearities detected
+Vars dropped:       pm25_shock_bin_10 inversion_shock_bin_9 pm25_shock_bin_8
+(MWFE estimator converged in 2 iterations)
+
+Unable to store first-stage regression of pm25_shock_bin_labels.
+
+
+First-stage regressions
+-----------------------
+
+Unable to display all first-stage regressions.
+There may be insufficient room to store results using -estimates store-,
+or names of endogenous regressors may be too long to store the results.
+Try dropping one or more estimation results using -estimates drop-,
+using the -savefprefix- option, or using shorter variable names.
+
+
+First-stage regression of pm25_shock_bin_1:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_1 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |  -.0019201   .0001396   -13.75   0.000    -.0021937   -.0016465
+     inversion_shock_bin_1 |  -.0208764          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0179833   .0011468   -15.68   0.000    -.0202309   -.0157357
+     inversion_shock_bin_3 |  -.0158511   .0011503   -13.78   0.000    -.0181057   -.0135965
+     inversion_shock_bin_4 |  -.0124328   .0011155   -11.15   0.000    -.0146191   -.0102466
+     inversion_shock_bin_5 |  -.0023086   .0009401    -2.46   0.014    -.0041512   -.0004661
+     inversion_shock_bin_6 |  -.0088345    .001069    -8.26   0.000    -.0109296   -.0067393
+     inversion_shock_bin_7 |  -.0054128   .0011115    -4.87   0.000    -.0075912   -.0032343
+     inversion_shock_bin_8 |  -.0002442   .0011614    -0.21   0.833    -.0025206    .0020322
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1201352   .0008452  -142.13   0.000    -.1217918   -.1184786
+          mean_temperature |   .0040137   .0000774    51.89   0.000     .0038621    .0041653
+        mean_precipitation |    .005842   .0000871    67.08   0.000     .0056714    .0060127
+                employment |  -5.88e-06   1.33e-06    -4.44   0.000    -8.48e-06   -3.29e-06
+           weekday_dummy_2 |  -.0004062   .0010172    -0.40   0.690    -.0023999    .0015875
+           weekday_dummy_3 |  -.0152278   .0010304   -14.78   0.000    -.0172474   -.0132082
+           weekday_dummy_4 |  -.0225148   .0010074   -22.35   0.000    -.0244892   -.0205403
+           weekday_dummy_5 |   .0033664   .0008756     3.84   0.000     .0016502    .0050826
+           weekday_dummy_6 |  -.0169278   .0009773   -17.32   0.000    -.0188433   -.0150124
+           weekday_dummy_7 |   -.017491   .0008494   -20.59   0.000    -.0191559   -.0158262
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_2:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_2 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0001636   .0001488     1.10   0.271     -.000128    .0004553
+     inversion_shock_bin_1 |   .0018185          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0007162   .0012117    -0.59   0.555    -.0030911    .0016588
+     inversion_shock_bin_3 |   .0007362   .0011344     0.65   0.516    -.0014872    .0029597
+     inversion_shock_bin_4 |  -.0002555   .0010826    -0.24   0.813    -.0023774    .0018665
+     inversion_shock_bin_5 |  -.0023331   .0009273    -2.52   0.012    -.0041505   -.0005156
+     inversion_shock_bin_6 |   .0004912   .0010918     0.45   0.653    -.0016488    .0026311
+     inversion_shock_bin_7 |   .0000677    .001136     0.06   0.953    -.0021588    .0022941
+     inversion_shock_bin_8 |   .0009914   .0011726     0.85   0.398    -.0013068    .0032897
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1182535   .0004098  -288.59   0.000    -.1190566   -.1174503
+          mean_temperature |   .0029439   .0000655    44.92   0.000     .0028154    .0030724
+        mean_precipitation |   .0037573    .000063    59.66   0.000     .0036338    .0038807
+                employment |  -3.87e-07   7.05e-07    -0.55   0.583    -1.77e-06    9.94e-07
+           weekday_dummy_2 |   -.005328   .0011157    -4.78   0.000    -.0075147   -.0031413
+           weekday_dummy_3 |  -.0056274    .001085    -5.19   0.000     -.007754   -.0035007
+           weekday_dummy_4 |  -.0095731   .0010864    -8.81   0.000    -.0117024   -.0074437
+           weekday_dummy_5 |  -.0051716   .0010718    -4.83   0.000    -.0072722    -.003071
+           weekday_dummy_6 |  -.0116814   .0010355   -11.28   0.000    -.0137109   -.0096518
+           weekday_dummy_7 |  -.0152109    .000967   -15.73   0.000    -.0171061   -.0133157
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_3:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_3 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |  -.0005075   .0001432    -3.54   0.000    -.0007882   -.0002267
+     inversion_shock_bin_1 |  -.0064419          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0043513   .0011863    -3.67   0.000    -.0066763   -.0020262
+     inversion_shock_bin_3 |  -.0047837   .0011143    -4.29   0.000    -.0069676   -.0025998
+     inversion_shock_bin_4 |  -.0001618   .0011402    -0.14   0.887    -.0023967     .002073
+     inversion_shock_bin_5 |  -.0012026   .0009487    -1.27   0.205     -.003062    .0006568
+     inversion_shock_bin_6 |   .0011911   .0011356     1.05   0.294    -.0010348    .0034169
+     inversion_shock_bin_7 |   .0006812   .0011791     0.58   0.563    -.0016298    .0029922
+     inversion_shock_bin_8 |  -.0010743   .0011982    -0.90   0.370    -.0034228    .0012742
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1105576   .0004069  -271.67   0.000    -.1113552     -.10976
+          mean_temperature |   .0007409   .0000714    10.37   0.000     .0006009     .000881
+        mean_precipitation |   .0020024   .0000547    36.62   0.000     .0018952    .0021095
+                employment |   1.01e-06   6.39e-07     1.58   0.115    -2.44e-07    2.26e-06
+           weekday_dummy_2 |  -.0072223   .0010668    -6.77   0.000    -.0093131   -.0051314
+           weekday_dummy_3 |  -.0054622    .001014    -5.39   0.000    -.0074497   -.0034747
+           weekday_dummy_4 |   .0005389   .0010413     0.52   0.605    -.0015019    .0025798
+           weekday_dummy_5 |  -.0050106   .0010731    -4.67   0.000    -.0071139   -.0029073
+           weekday_dummy_6 |  -.0088577   .0010039    -8.82   0.000    -.0108254     -.00689
+           weekday_dummy_7 |  -.0051575    .001002    -5.15   0.000    -.0071214   -.0031937
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_4:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_4 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |  -.0002107   .0001332    -1.58   0.114    -.0004717    .0000503
+     inversion_shock_bin_1 |   -.001779          .        .       .            .           .
+     inversion_shock_bin_2 |  -.0022044   .0011946    -1.85   0.065    -.0045457     .000137
+     inversion_shock_bin_3 |   -.001876   .0011658    -1.61   0.108    -.0041609    .0004089
+     inversion_shock_bin_4 |  -.0016099   .0011756    -1.37   0.171     -.003914    .0006941
+     inversion_shock_bin_5 |  -.0008593   .0009176    -0.94   0.349    -.0026576    .0009391
+     inversion_shock_bin_6 |   .0022419   .0011585     1.94   0.053    -.0000287    .0045124
+     inversion_shock_bin_7 |   .0036114   .0011581     3.12   0.002     .0013417    .0058812
+     inversion_shock_bin_8 |    .000165   .0012335     0.13   0.894    -.0022527    .0025826
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |    -.09714   .0004885  -198.86   0.000    -.0980974   -.0961826
+          mean_temperature |  -.0008005    .000068   -11.76   0.000    -.0009339   -.0006671
+        mean_precipitation |   .0006158   .0000523    11.77   0.000     .0005133    .0007184
+                employment |   2.87e-06   8.90e-07     3.23   0.001     1.13e-06    4.61e-06
+           weekday_dummy_2 |  -.0053512   .0010662    -5.02   0.000    -.0074409   -.0032615
+           weekday_dummy_3 |  -.0053943   .0010549    -5.11   0.000    -.0074618   -.0033267
+           weekday_dummy_4 |   .0003927   .0010888     0.36   0.718    -.0017414    .0025268
+           weekday_dummy_5 |  -.0086645   .0010673    -8.12   0.000    -.0107564   -.0065725
+           weekday_dummy_6 |  -.0066995   .0010579    -6.33   0.000     -.008773   -.0046261
+           weekday_dummy_7 |   -.005846   .0010112    -5.78   0.000    -.0078278   -.0038642
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_5:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_5 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0007237   .0001316     5.50   0.000     .0004657    .0009817
+     inversion_shock_bin_1 |   .0093172          .        .       .            .           .
+     inversion_shock_bin_2 |   .0101716   .0011801     8.62   0.000     .0078586    .0124846
+     inversion_shock_bin_3 |   .0058937   .0011409     5.17   0.000     .0036577    .0081298
+     inversion_shock_bin_4 |   .0040259    .001177     3.42   0.001     .0017189    .0063329
+     inversion_shock_bin_5 |   .0054193   .0010999     4.93   0.000     .0032636    .0075751
+     inversion_shock_bin_6 |   .0021493   .0012141     1.77   0.077    -.0002302    .0045288
+     inversion_shock_bin_7 |   .0035991   .0011323     3.18   0.001     .0013797    .0058185
+     inversion_shock_bin_8 |   .0002437   .0011633     0.21   0.834    -.0020364    .0025238
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |   -.082121   .0005215  -157.48   0.000     -.083143   -.0810989
+          mean_temperature |  -.0009547   .0000727   -13.13   0.000    -.0010972   -.0008122
+        mean_precipitation |  -.0001123   .0000532    -2.11   0.035    -.0002166   -8.03e-06
+                employment |   2.28e-06   9.95e-07     2.29   0.022     3.28e-07    4.23e-06
+           weekday_dummy_2 |   .0046441   .0009676     4.80   0.000     .0027476    .0065406
+           weekday_dummy_3 |   .0001656   .0009604     0.17   0.863    -.0017167    .0020479
+           weekday_dummy_4 |     .00408   .0009688     4.21   0.000     .0021811    .0059789
+           weekday_dummy_5 |   .0007135   .0009803     0.73   0.467    -.0012079    .0026349
+           weekday_dummy_6 |   .0029002   .0009937     2.92   0.004     .0009525    .0048478
+           weekday_dummy_7 |  -.0033238   .0009958    -3.34   0.001    -.0052754   -.0013721
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_6:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_6 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0003902   .0001322     2.95   0.003      .000131    .0006494
+     inversion_shock_bin_1 |   .0051847          .        .       .            .           .
+     inversion_shock_bin_2 |   .0077302   .0011811     6.54   0.000     .0054153    .0100452
+     inversion_shock_bin_3 |    .003573   .0011027     3.24   0.001     .0014117    .0057343
+     inversion_shock_bin_4 |   .0016655   .0011642     1.43   0.153    -.0006163    .0039474
+     inversion_shock_bin_5 |  -.0008395    .000913    -0.92   0.358    -.0026289      .00095
+     inversion_shock_bin_6 |    .000288   .0011582     0.25   0.804     -.001982    .0025581
+     inversion_shock_bin_7 |    .001401   .0011467     1.22   0.222    -.0008464    .0036484
+     inversion_shock_bin_8 |   .0026949   .0011614     2.32   0.020     .0004185    .0049712
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.0909114   .0005423  -167.63   0.000    -.0919743   -.0898484
+          mean_temperature |  -.0014423    .000067   -21.54   0.000    -.0015735   -.0013111
+        mean_precipitation |  -.0016766   .0000435   -38.53   0.000    -.0017619   -.0015913
+                employment |   1.86e-06   6.86e-07     2.72   0.007     5.21e-07    3.21e-06
+           weekday_dummy_2 |    .007101   .0010064     7.06   0.000     .0051284    .0090736
+           weekday_dummy_3 |   .0079442   .0010165     7.82   0.000     .0059519    .0099366
+           weekday_dummy_4 |   .0067029   .0010682     6.28   0.000     .0046093    .0087965
+           weekday_dummy_5 |   .0074771   .0010676     7.00   0.000     .0053847    .0095695
+           weekday_dummy_6 |   .0056474   .0009753     5.79   0.000     .0037358    .0075589
+           weekday_dummy_7 |   .0038367   .0009855     3.89   0.000     .0019051    .0057683
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_7:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_7 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |    .001116   .0001417     7.88   0.000     .0008383    .0013936
+     inversion_shock_bin_1 |    .008061          .        .       .            .           .
+     inversion_shock_bin_2 |   .0078835   .0011807     6.68   0.000     .0055694    .0101975
+     inversion_shock_bin_3 |   .0045679   .0011545     3.96   0.000     .0023052    .0068305
+     inversion_shock_bin_4 |   .0025893    .001147     2.26   0.024     .0003411    .0048375
+     inversion_shock_bin_5 |  -.0029285   .0009547    -3.07   0.002    -.0047998   -.0010572
+     inversion_shock_bin_6 |  -.0000722    .001183    -0.06   0.951    -.0023907    .0022464
+     inversion_shock_bin_7 |  -.0029889   .0011528    -2.59   0.010    -.0052483   -.0007295
+     inversion_shock_bin_8 |  -.0014372   .0011871    -1.21   0.226    -.0037639    .0008895
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |   -.112433   .0005254  -213.99   0.000    -.1134628   -.1114032
+          mean_temperature |  -.0018925    .000067   -28.25   0.000    -.0020237   -.0017612
+        mean_precipitation |  -.0025155   .0000417   -60.39   0.000    -.0025971   -.0024339
+                employment |   1.13e-06   6.89e-07     1.64   0.100    -2.18e-07    2.48e-06
+           weekday_dummy_2 |   .0076705   .0010039     7.64   0.000     .0057029    .0096381
+           weekday_dummy_3 |   .0122441   .0010138    12.08   0.000     .0102571    .0142311
+           weekday_dummy_4 |   .0110436   .0010192    10.84   0.000      .009046    .0130413
+           weekday_dummy_5 |    .005776   .0009907     5.83   0.000     .0038343    .0077178
+           weekday_dummy_6 |   .0114848   .0009911    11.59   0.000     .0095422    .0134274
+           weekday_dummy_7 |   .0064393   .0009872     6.52   0.000     .0045045    .0083741
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+First-stage regression of pm25_shock_bin_8:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1128764
+Number of clusters (fips) =       3101
+--------------------------------------------------------------------------------------------
+                           |               Robust
+          pm25_shock_bin_8 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------------------+----------------------------------------------------------------
+inversion_shock_bin_labels |   .0008935   .0001385     6.45   0.000      .000622    .0011649
+     inversion_shock_bin_1 |   .0060794          .        .       .            .           .
+     inversion_shock_bin_2 |   .0056506   .0011996     4.71   0.000     .0032996    .0080017
+     inversion_shock_bin_3 |   .0097314   .0011608     8.38   0.000     .0074563    .0120064
+     inversion_shock_bin_4 |   .0081328   .0011083     7.34   0.000     .0059606    .0103049
+     inversion_shock_bin_5 |   .0005631   .0009564     0.59   0.556    -.0013113    .0024376
+     inversion_shock_bin_6 |   .0051822   .0011496     4.51   0.000      .002929    .0074355
+     inversion_shock_bin_7 |   .0007648   .0011657     0.66   0.512    -.0015199    .0030494
+     inversion_shock_bin_8 |   .0016514   .0012468     1.32   0.185    -.0007923    .0040951
+     inversion_shock_bin_9 |          0  (omitted)
+          pm25_shock_bin_9 |  -.1288953    .000483  -266.86   0.000     -.129842   -.1279486
+          mean_temperature |  -.0026337   .0000737   -35.72   0.000    -.0027782   -.0024892
+        mean_precipitation |  -.0031988   .0000373   -85.78   0.000    -.0032719   -.0031257
+                employment |   1.24e-06   7.56e-07     1.64   0.102    -2.44e-07    2.72e-06
+           weekday_dummy_2 |   .0055731   .0009785     5.70   0.000     .0036552     .007491
+           weekday_dummy_3 |   .0062283   .0010062     6.19   0.000     .0042561    .0082005
+           weekday_dummy_4 |   .0118239   .0010249    11.54   0.000     .0098151    .0138327
+           weekday_dummy_5 |   .0053824   .0010526     5.11   0.000     .0033194    .0074454
+           weekday_dummy_6 |   .0223959   .0010186    21.99   0.000     .0203994    .0243923
+           weekday_dummy_7 |   .0088918   .0010138     8.77   0.000     .0069048    .0108788
+--------------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  9,  3100) =        .
+  Prob > F      =        .
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3100) =        .
+  Prob > F      =        .
+
+
+
+Summary results for first-stage regressions
+-------------------------------------------
+
+                                           (Underid)            (Weak id)
+Variable     | F(  9,  3100)  P-val | SW Chi-sq(  1) P-val | SW F(  1,  3100)
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+pm25_shock_b |          .         . |           .        . |           .
+
+NB: first-stage test statistics cluster-robust
+
+Stock-Yogo weak ID F test critical values for single endogenous regressor:
+                                    5% maximal IV relative bias    20.53
+                                   10% maximal IV relative bias    11.46
+                                   20% maximal IV relative bias     6.65
+                                   30% maximal IV relative bias     4.92
+                                   10% maximal IV size             36.19
+                                   15% maximal IV size             19.71
+                                   20% maximal IV size             14.01
+                                   25% maximal IV size             11.07
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for i.i.d. errors only.
+
+Underidentification test
+Ho: matrix of reduced form coefficients has rank=K1-1 (underidentified)
+Ha: matrix has rank=K1 (identified)
+Kleibergen-Paap rk LM statistic          Chi-sq(1)=0.00     P-val=0.9577
+
+Weak identification test
+Ho: equation is weakly identified
+Cragg-Donald Wald F statistic                                       0.00
+Kleibergen-Paap Wald rk F statistic                                 0.00
+
+Stock-Yogo weak ID test critical values for K1=9 and L1=9:
+                                                               <not available>
+
+Weak-instrument-robust inference
+Tests of joint significance of endogenous regressors B1 in main equation
+Ho: B1=0 and orthogonality conditions are valid
+Anderson-Rubin Wald test           F(9,3100)=         .     P-val=     .
+Anderson-Rubin Wald test           Chi-sq(9)=         .     P-val=     .
+Stock-Wright LM S statistic        Chi-sq(9)=      4.25     P-val=0.8942
+
+NB: Underidentification, weak identification and weak-identification-robust
+    test statistics cluster-robust
+
+Number of clusters             N_clust  =       3101
+Number of observations               N  =    1128764
+Number of regressors                 K  =         18
+Number of endogenous regressors      K1 =          9
+Number of instruments                L  =         18
+Number of excluded instruments       L1 =          9
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on fips
+
+Number of clusters (fips) =       3101                Number of obs =  1128764
+                                                      F( 18,  3100) =  8.1e+11
+                                                      Prob > F      =   0.0000
+Total (centered) SS     =  1482.720626                Centered R2   =  -0.8778
+Total (uncentered) SS   =  1482.720626                Uncentered R2 =  -0.8778
+Residual SS             =  2784.237296                Root MSE      =   .04967
+
+---------------------------------------------------------------------------------------
+                      |               Robust
+    accident_occurred |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+----------------------+----------------------------------------------------------------
+pm25_shock_bin_labels |  -.0026076   .2240904    -0.01   0.991    -.4419883    .4367731
+     pm25_shock_bin_1 |   .0153103   1.300042     0.01   0.991     -2.53372    2.564341
+     pm25_shock_bin_2 |          0   .5262835     0.00   1.000      -1.0319      1.0319
+     pm25_shock_bin_3 |   -.005222   .6716392    -0.01   0.994    -1.322125    1.311681
+     pm25_shock_bin_4 |          0   1.895835     0.00   1.000    -3.717219    3.717219
+     pm25_shock_bin_5 |    .076922    1.24513     0.06   0.951    -2.364441    2.518285
+     pm25_shock_bin_6 |  -.0568461    1.36853    -0.04   0.967    -2.740162     2.62647
+     pm25_shock_bin_7 |   .0520187   .3802106     0.14   0.891    -.6934715    .7975089
+     pm25_shock_bin_8 |   .0267036   .4083875     0.07   0.948    -.7740339     .827441
+    pm25_shock_bin_10 |          0  (omitted)
+     pm25_shock_bin_9 |   .0214629    .475927     0.05   0.964    -.9117012    .9546269
+     mean_temperature |  -8.34e-06   .0064126    -0.00   0.999    -.0125817     .012565
+   mean_precipitation |  -.0001754   .0113909    -0.02   0.988    -.0225099    .0221592
+           employment |   3.90e-07   5.12e-07     0.76   0.447    -6.14e-07    1.39e-06
+      weekday_dummy_2 |   .0010698   .0017241     0.62   0.535    -.0023107    .0044504
+      weekday_dummy_3 |   .0019798   .0203189     0.10   0.922    -.0378601    .0418197
+      weekday_dummy_4 |   .0017067   .0182119     0.09   0.925    -.0340018    .0374152
+      weekday_dummy_5 |   .0016238   .0048593     0.33   0.738    -.0079041    .0111516
+      weekday_dummy_6 |   .0012445   .0168005     0.07   0.941    -.0316968    .0341858
+      weekday_dummy_7 |   .0014213   .0493119     0.03   0.977    -.0952659    .0981086
+---------------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):              0.003
+                                                   Chi-sq(1) P-val =    0.9577
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):                0.000
+                         (Kleibergen-Paap rk Wald F statistic):          0.000
+Stock-Yogo weak ID test critical values:                       <not available>
+------------------------------------------------------------------------------
+Warning: estimated covariance matrix of moment conditions not of full rank.
+         overidentification statistic not reported, and standard errors and
+         model tests should be interpreted with caution.
+Possible causes:
+         number of clusters insufficient to calculate robust covariance matrix
+         singleton dummy variable (dummy with one 1 and N-1 0s or vice versa)
+partial option may address problem.
+------------------------------------------------------------------------------
+Collinearities detected among instruments: 1 instrument(s) dropped
+Instrumented:         pm25_shock_bin_labels pm25_shock_bin_1 pm25_shock_bin_2
+                      pm25_shock_bin_3 pm25_shock_bin_4 pm25_shock_bin_5
+                      pm25_shock_bin_6 pm25_shock_bin_7 pm25_shock_bin_8
+Included instruments: pm25_shock_bin_9 mean_temperature mean_precipitation
+                      employment weekday_dummy_2 weekday_dummy_3 weekday_dummy_4
+                      weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
+Excluded instruments: inversion_shock_bin_labels inversion_shock_bin_1
+                      inversion_shock_bin_2 inversion_shock_bin_3
+                      inversion_shock_bin_4 inversion_shock_bin_5
+                      inversion_shock_bin_6 inversion_shock_bin_7
+                      inversion_shock_bin_8
+Partialled-out:       _cons
+                      nb: total SS, model F and R2s are after partialling-out;
+                          any small-sample adjustments include partialled-out
+                          variables in regressor count K
+Dropped collinear:    pm25_shock_bin_10 inversion_shock_bin_9 pm25_shock_bin_8
+Reclassified as exog: pm25_shock_bin_9
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+        fips |      3101        3101           0    *|
+       month |        12           1          11     |
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+(est4 stored)
+
+. 
+end of do-file
+
+. do "E:\Research Projects\Worker Accidents and Pollution\Regression Models\4 - Panel Linear Analysis.do"
+
+. * Start with a clean slate.
+. log close _all
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\Construction_accident_analysis_log.log
+  log type:  text
+ closed on:   3 Aug 2020, 19:38:16
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------

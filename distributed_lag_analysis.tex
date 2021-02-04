@@ -1,0 +1,65 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Lag Analysis\label{tab1}}
+\begin{tabular}{l*{4}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}\\
+                    &\multicolumn{1}{c}{est1}&\multicolumn{1}{c}{est2}&\multicolumn{1}{c}{est3}&\multicolumn{1}{c}{est4}\\
+\midrule
+x0                  &  -0.0000648         &                     &    0.000248         &                     \\
+                    &     (-0.29)         &                     &      (0.73)         &                     \\
+\addlinespace
+x1                  &    0.000320         &                     &    -0.00338         &                     \\
+                    &      (0.49)         &                     &     (-0.93)         &                     \\
+\addlinespace
+x2                  &   -0.000119         &                     &     0.00362         &                     \\
+                    &     (-0.47)         &                     &      (1.01)         &                     \\
+\addlinespace
+mean\_temperature    &  0.00000811         &                     &   0.0000276         &                     \\
+                    &      (0.34)         &                     &      (0.98)         &                     \\
+\addlinespace
+mean\_precipitation  &  -0.0000229         &                     &   0.0000255         &                     \\
+                    &     (-0.54)         &                     &      (0.50)         &                     \\
+\addlinespace
+employment          & 0.000000414         &                     & 0.000000375         &                     \\
+                    &      (0.71)         &                     &      (0.64)         &                     \\
+\addlinespace
+weekday==     2.0000&     0.00152\sym{***}&                     &     0.00133\sym{***}&                     \\
+                    &      (7.05)         &                     &      (4.28)         &                     \\
+\addlinespace
+weekday==     3.0000&     0.00180\sym{***}&                     &     0.00193\sym{***}&                     \\
+                    &      (4.44)         &                     &      (5.09)         &                     \\
+\addlinespace
+weekday==     4.0000&     0.00186\sym{***}&                     &     0.00203\sym{***}&                     \\
+                    &      (5.41)         &                     &      (6.17)         &                     \\
+\addlinespace
+weekday==     5.0000&     0.00173\sym{***}&                     &     0.00182\sym{***}&                     \\
+                    &      (7.14)         &                     &      (7.85)         &                     \\
+\addlinespace
+weekday==     6.0000&     0.00164\sym{***}&                     &     0.00150\sym{***}&                     \\
+                    &      (5.37)         &                     &      (4.03)         &                     \\
+\addlinespace
+weekday==     7.0000&    0.000604\sym{*}  &                     &    0.000764\sym{**} &                     \\
+                    &      (2.00)         &                     &      (2.60)         &                     \\
+\addlinespace
+beta\_0              &                     &  -0.0000648         &                     &    0.000248         \\
+                    &                     &     (-0.29)         &                     &      (0.73)         \\
+\addlinespace
+beta\_1              &                     &    0.000136         &                     &   -0.000390         \\
+                    &                     &      (0.47)         &                     &     (-0.60)         \\
+\addlinespace
+beta\_2              &                     &   0.0000989         &                     &    0.000955         \\
+                    &                     &      (0.53)         &                     &      (1.19)         \\
+\addlinespace
+beta\_3              &                     &   -0.000177         &                     &   -0.000978         \\
+                    &                     &     (-0.33)         &                     &     (-1.34)         \\
+\addlinespace
+x3                  &                     &                     &   -0.000877         &                     \\
+                    &                     &                     &     (-1.07)         &                     \\
+\midrule
+Observations        &     1122562         &     1122562         &     1122562         &     1122562         \\
+\bottomrule
+\multicolumn{5}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{5}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}

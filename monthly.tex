@@ -1,0 +1,77 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Monthly\label{tab1}}
+\begin{tabular}{l*{1}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}\\
+                    &\multicolumn{1}{c}{est1}\\
+\midrule
+month=1 $\times$ mean\_pm25&   -0.000342         \\
+                    &     (-1.09)         \\
+\addlinespace
+month=2 $\times$ mean\_pm25&   -0.000334         \\
+                    &     (-1.12)         \\
+\addlinespace
+month=3 $\times$ mean\_pm25&   -0.000447         \\
+                    &     (-1.17)         \\
+\addlinespace
+month=4 $\times$ mean\_pm25&   -0.000492         \\
+                    &     (-1.06)         \\
+\addlinespace
+month=5 $\times$ mean\_pm25&   -0.000504         \\
+                    &     (-1.09)         \\
+\addlinespace
+month=6 $\times$ mean\_pm25&   -0.000344         \\
+                    &     (-0.94)         \\
+\addlinespace
+month=7 $\times$ mean\_pm25&   -0.000365         \\
+                    &     (-0.95)         \\
+\addlinespace
+month=8 $\times$ mean\_pm25&   -0.000355         \\
+                    &     (-0.96)         \\
+\addlinespace
+month=9 $\times$ mean\_pm25&   -0.000363         \\
+                    &     (-1.03)         \\
+\addlinespace
+month=10 $\times$ mean\_pm25&   -0.000480         \\
+                    &     (-1.08)         \\
+\addlinespace
+month=11 $\times$ mean\_pm25&   -0.000524         \\
+                    &     (-1.12)         \\
+\addlinespace
+month=12 $\times$ mean\_pm25&   -0.000395         \\
+                    &     (-1.17)         \\
+\addlinespace
+mean\_temperature    &   0.0000752         \\
+                    &      (0.87)         \\
+\addlinespace
+mean\_precipitation  &  -0.0000968         \\
+                    &     (-1.29)         \\
+\addlinespace
+employment          & 0.000000397         \\
+                    &      (0.70)         \\
+\addlinespace
+weekday==     2.0000&     0.00139\sym{***}\\
+                    &      (6.93)         \\
+\addlinespace
+weekday==     3.0000&     0.00158\sym{***}\\
+                    &      (7.71)         \\
+\addlinespace
+weekday==     4.0000&     0.00164\sym{***}\\
+                    &      (8.07)         \\
+\addlinespace
+weekday==     5.0000&     0.00152\sym{***}\\
+                    &      (7.41)         \\
+\addlinespace
+weekday==     6.0000&     0.00147\sym{***}\\
+                    &      (8.68)         \\
+\addlinespace
+weekday==     7.0000&    0.000533\sym{***}\\
+                    &      (4.70)         \\
+\midrule
+Observations        &     1131865         \\
+\bottomrule
+\multicolumn{2}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{2}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}

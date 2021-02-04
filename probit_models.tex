@@ -1,0 +1,96 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Probit Models\label{tab1}}
+\begin{tabular}{l*{3}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+                    &\multicolumn{1}{c}{est1}&\multicolumn{1}{c}{est2}&\multicolumn{1}{c}{est3}\\
+\midrule
+accident\_occurred   &                     &                     &                     \\
+mean\_pm25           &      0.0736\sym{***}&      0.0736\sym{***}&      0.0736\sym{***}\\
+                    &      (3.47)         &      (3.47)         &      (3.47)         \\
+\addlinespace
+mean\_temperature    &     -0.0119\sym{*}  &     -0.0119\sym{*}  &     -0.0119\sym{*}  \\
+                    &     (-2.49)         &     (-2.49)         &     (-2.49)         \\
+\addlinespace
+mean\_precipitation  &     0.00673         &     0.00673         &     0.00673         \\
+                    &      (1.60)         &      (1.60)         &      (1.60)         \\
+\addlinespace
+employment          &   0.0000158\sym{***}&   0.0000158\sym{***}&   0.0000158\sym{***}\\
+                    &      (7.02)         &      (7.02)         &      (7.02)         \\
+\addlinespace
+weekday=1           &           0         &           0         &           0         \\
+                    &         (.)         &         (.)         &         (.)         \\
+\addlinespace
+weekday=2           &       0.679\sym{***}&       0.679\sym{***}&       0.679\sym{***}\\
+                    &      (7.46)         &      (7.46)         &      (7.46)         \\
+\addlinespace
+weekday=3           &       0.718\sym{***}&       0.718\sym{***}&       0.718\sym{***}\\
+                    &      (7.68)         &      (7.68)         &      (7.68)         \\
+\addlinespace
+weekday=4           &       0.719\sym{***}&       0.719\sym{***}&       0.719\sym{***}\\
+                    &      (7.63)         &      (7.63)         &      (7.63)         \\
+\addlinespace
+weekday=5           &       0.728\sym{***}&       0.728\sym{***}&       0.728\sym{***}\\
+                    &      (7.95)         &      (7.95)         &      (7.95)         \\
+\addlinespace
+weekday=6           &       0.686\sym{***}&       0.686\sym{***}&       0.686\sym{***}\\
+                    &      (7.28)         &      (7.28)         &      (7.28)         \\
+\addlinespace
+weekday=7           &       0.371\sym{***}&       0.371\sym{***}&       0.371\sym{***}\\
+                    &      (4.75)         &      (4.75)         &      (4.75)         \\
+\addlinespace
+Constant            &      -0.719         &      -0.719         &      -0.719         \\
+                    &     (-0.49)         &     (-0.49)         &     (-0.49)         \\
+\midrule
+mean\_pm25           &                     &                     &                     \\
+mean\_temperature    &       0.203\sym{***}&       0.203\sym{***}&       0.203\sym{***}\\
+                    &     (61.23)         &     (61.23)         &     (61.23)         \\
+\addlinespace
+mean\_precipitation  &      -0.162\sym{***}&      -0.162\sym{***}&      -0.162\sym{***}\\
+                    &    (-84.13)         &    (-84.13)         &    (-84.13)         \\
+\addlinespace
+employment          &  -0.0000108         &  -0.0000108         &  -0.0000108         \\
+                    &     (-1.11)         &     (-1.11)         &     (-1.11)         \\
+\addlinespace
+weekday=1           &           0         &           0         &           0         \\
+                    &         (.)         &         (.)         &         (.)         \\
+\addlinespace
+weekday=2           &      -0.182\sym{***}&      -0.182\sym{***}&      -0.182\sym{***}\\
+                    &    (-21.59)         &    (-21.59)         &    (-21.59)         \\
+\addlinespace
+weekday=3           &      -0.210\sym{***}&      -0.210\sym{***}&      -0.210\sym{***}\\
+                    &    (-24.63)         &    (-24.63)         &    (-24.63)         \\
+\addlinespace
+weekday=4           &      -0.118\sym{***}&      -0.118\sym{***}&      -0.118\sym{***}\\
+                    &     (-7.91)         &     (-7.91)         &     (-7.91)         \\
+\addlinespace
+weekday=5           &      -0.262\sym{***}&      -0.262\sym{***}&      -0.262\sym{***}\\
+                    &    (-15.52)         &    (-15.52)         &    (-15.52)         \\
+\addlinespace
+weekday=6           &     -0.0398\sym{*}  &     -0.0398\sym{*}  &     -0.0398\sym{*}  \\
+                    &     (-2.33)         &     (-2.33)         &     (-2.33)         \\
+\addlinespace
+weekday=7           &       0.225\sym{***}&       0.225\sym{***}&       0.225\sym{***}\\
+                    &     (17.12)         &     (17.12)         &     (17.12)         \\
+\addlinespace
+inversion\_coverage  &       0.866\sym{***}&       0.866\sym{***}&       0.866\sym{***}\\
+                    &     (15.51)         &     (15.51)         &     (15.51)         \\
+\addlinespace
+Constant            &      -47.23\sym{***}&      -47.23\sym{***}&      -47.23\sym{***}\\
+                    &    (-49.99)         &    (-49.99)         &    (-49.99)         \\
+\midrule
+athrho2\_1           &                     &                     &                     \\
+Constant            &      -0.582\sym{**} &      -0.582\sym{**} &      -0.582\sym{**} \\
+                    &     (-2.93)         &     (-2.93)         &     (-2.93)         \\
+\midrule
+lnsigma2            &                     &                     &                     \\
+Constant            &       1.923\sym{***}&       1.923\sym{***}&       1.923\sym{***}\\
+                    &    (489.64)         &    (489.64)         &    (489.64)         \\
+\midrule
+Observations        &     1131865         &     1131865         &     1131865         \\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{4}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}
