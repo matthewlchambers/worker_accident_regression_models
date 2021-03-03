@@ -1,0 +1,99 @@
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\summary_stats.log
+  log type:  text
+ opened on:  29 Jan 2021, 15:57:39
+
+. 
+. * Import the clean data file, produced using R. I'm using Stata for the analysis.
+. * because Stata works with panel data a little easier.
+. import delimited "../Data/Data for Regression Models/construction_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+(12 vars, 15,288,560 obs)
+
+. 
+. * Take a smaller sample for local code testing
+. //keep if strpos(date, "2005")
+. 
+. ********* End of section to change when switching between local and ACCRE ******
+. 
+. ********* Basic fixes to data file, applicable to every regression *************
+. 
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+
+. drop date
+
+. rename temporary_date date
+
+. format date %td
+
+. 
+. * Create a month variable so I can absorb month-of-year fixed effects
+. gen month = month(date)
+
+. 
+. * Create weekday dummy variables, since ivreg2 can't handle factor variables
+. tabulate weekday, generate(weekday_dummy_)
+
+    weekday |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |  2,183,160       14.28       14.28
+          2 |  2,183,160       14.28       28.56
+          3 |  2,183,160       14.28       42.84
+          4 |  2,186,380       14.30       57.14
+          5 |  2,186,380       14.30       71.44
+          6 |  2,183,160       14.28       85.72
+          7 |  2,183,160       14.28      100.00
+------------+-----------------------------------
+      Total | 15,288,560      100.00
+
+. drop weekday_dummy_1
+
+. 
+. * Destring mean_pm25 because somehow it imported as a date.
+. destring mean_pm25, force replace
+mean_pm25 already numeric; no replace
+
+. 
+. * Drop any observations from Alaska, Hawaii, or Puerto Rico.
+. drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72
+(531,776 observations deleted)
+
+. 
+. * Declare the data as panel data.
+. xtset fips date
+       panel variable:  fips (strongly balanced)
+        time variable:  date, 01jan2003 to 31dec2015
+                delta:  1 day
+
+. 
+. * Make a binary for an accident occurring.
+. gen accident_occurred = 1 if num_accidents > 0
+(14,741,796 missing values generated)
+
+. replace accident_occurred = 0 if accident_occurred == .
+(14,741,796 real changes made)
+
+. 
+. ********* End basic fixes to data file, applicable to every regression *********
+. 
+. gen season = .
+(14,756,784 missing values generated)
+
+. replace season = 1 if month == 12 | month == 1  | month == 2
+(3,645,684 real changes made)
+
+. replace season = 2 if month == 3  | month == 4  | month == 5
+(3,717,168 real changes made)
+
+. replace season = 3 if month == 6  | month == 7  | month == 8
+(3,717,168 real changes made)
+
+. replace season = 4 if month == 9  | month == 10 | month == 11
+(3,676,764 real changes made)
+
+. 
+. 
+end of do-file
+
+. exit, clear

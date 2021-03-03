@@ -1,0 +1,44 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Exposure, Shock, and Moving Average Experiments\label{tab1}}
+\begin{tabular}{l*{1}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}\\
+                    &\multicolumn{1}{c}{.25-.75}\\
+\midrule
+mean\_pm25           &    0.000841\sym{*}  \\
+                    &      (2.07)         \\
+\addlinespace
+mean\_temperature    &   -0.000142         \\
+                    &     (-1.89)         \\
+\addlinespace
+mean\_precipitation  &    0.000140         \\
+                    &      (1.81)         \\
+\addlinespace
+employment          & 0.000000914         \\
+                    &      (1.50)         \\
+\addlinespace
+weekday==     2.0000&     0.00163\sym{***}\\
+                    &      (8.24)         \\
+\addlinespace
+weekday==     3.0000&     0.00185\sym{***}\\
+                    &      (8.87)         \\
+\addlinespace
+weekday==     4.0000&     0.00183\sym{***}\\
+                    &      (8.99)         \\
+\addlinespace
+weekday==     5.0000&     0.00191\sym{***}\\
+                    &      (8.77)         \\
+\addlinespace
+weekday==     6.0000&     0.00159\sym{***}\\
+                    &      (8.97)         \\
+\addlinespace
+weekday==     7.0000&    0.000273\sym{*}  \\
+                    &      (2.31)         \\
+\midrule
+Observations        &     1131865         \\
+\bottomrule
+\multicolumn{2}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{2}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}

@@ -67,10 +67,16 @@ replace accident_occurred = 0 if accident_occurred == .
 
 ********* End basic fixes to data file, applicable to every regression *********
 
+* Generate powers of inversion coverage as separate variables so that I can prevent
+* ivlasso from dropping them and then refusing to estimate the equation
+forvalues i = 1/7 {
+	gen inversion_coverage_`i' = inversion_coverage^`i'
+}
+
 eststo: ivlasso accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_coverage), cluster(fips) fe first
 eststo: ivlasso accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (c.mean_pm25##c.mean_pm25 = c.inversion_coverage##c.inversion_coverage), cluster(fips) fe first
-eststo: ivlasso accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (c.mean_pm25##c.mean_pm25##c.mean_pm25##c.mean_pm25 = c.inversion_coverage##c.inversion_coverage##c.inversion_coverage##c.inversion_coverage), cluster(fips) fe first
-eststo: ivlasso accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (c.mean_pm25##c.mean_pm25##c.mean_pm25##c.mean_pm25##c.mean_pm25 = c.inversion_coverage##c.inversion_coverage##c.inversion_coverage##c.inversion_coverage##c.inversion_coverage), cluster(fips) fe first
+eststo: ivlasso accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (c.mean_pm25##c.mean_pm25##c.mean_pm25##c.mean_pm25##c.mean_pm25 = inversion_coverage_*), cluster(fips) fe first pnotpen(inversion_coverage_1 inversion_coverage_2 inversion_coverage_3 inversion_coverage_4 inversion_coverage_5)
+eststo: ivlasso accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (c.mean_pm25##c.mean_pm25##c.mean_pm25##c.mean_pm25##c.mean_pm25##c.mean_pm25 = inversion_coverage_*), cluster(fips) fe first pnotpen(inversion_coverage_1 inversion_coverage_2 inversion_coverage_3 inversion_coverage_4 inversion_coverage_5 inversion_coverage_6)
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.
 esttab using iv_lasso.tex, replace label mtitles booktabs alignment(D{.}{.}{-1}) title(FE and Clustering Experiments\label{tab1})

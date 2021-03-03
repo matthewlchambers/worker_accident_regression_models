@@ -1,0 +1,388 @@
+{smcl}
+{com}{sf}{ul off}{txt}{.-}
+      name:  {res}main
+       {txt}log:  {res}E:\Research Projects\Worker Accidents and Pollution\Regression Models\Construction_accident_analysis_log.txt
+  {txt}log type:  {res}smcl
+ {txt}opened on:  {res}21 Jul 2020, 12:09:23
+{txt}
+{com}. 
+. * Import the clean data file, produced using R. I'm using Stata for the analysis.
+. * because Stata works with panel data a little easier.
+. import delimited "../Data/Data for Regression Models/construction_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+{res}{text}(12 vars, 15,288,560 obs)
+
+{com}. 
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+{txt}
+{com}. drop date
+{txt}
+{com}. rename temporary_date date
+{res}{txt}
+{com}. format date %td
+{txt}
+{com}. 
+. * Destring mean_pm25 because somehow it imported as a date.
+. destring mean_pm25, force replace
+{txt}mean_pm25 already numeric; no {res}replace
+{txt}
+{com}. 
+. * Declare the data as panel data.
+. xtset fips date
+{res}{txt}{col 8}panel variable:  {res}fips (strongly balanced)
+{txt}{col 9}time variable:  {res}{col 25}date, 01jan2003 to 31dec2015
+{txt}{col 17}delta:  {res}1 day
+{txt}
+{com}. 
+. * Make a binary for an accident occurring
+. gen accident_occurred = 1 if num_accidents > 0
+{txt}(15,273,513 missing values generated)
+
+{com}. replace accident_occurred = 0 if accident_occurred == .
+{txt}(15,273,513 real changes made)
+
+{com}. 
+. * Make some variables for modeling simple non-linearity in the exposure
+. gen mean_pm25_2 = mean_pm25^2
+{txt}(531,855 missing values generated)
+
+{com}. gen mean_pm25_3 = mean_pm25^3
+{txt}(531,855 missing values generated)
+
+{com}. gen mean_pm25_log = log(mean_pm25)
+{txt}(531,855 missing values generated)
+
+{com}. 
+. * Start esimating some models
+. xtivreg accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 = inversion_coverage), fe
+{res}
+{txt}Fixed-effects (within) IV regression{col 49}Number of obs{col 67}={col 69}{res}14,710,686
+{txt}Group variable: {res}fips{txt}{col 49}Number of groups{col 67}={col 69}{res}     3,108
+
+{txt}R-sq:{col 49}Obs per group:
+     within  = {res}0.0016{col 63}{txt}min{col 67}={col 69}{res}       365
+{txt}     between = {res}0.5059{col 63}{txt}avg{col 67}={col 69}{res}   4,733.2
+{txt}     overall = {res}0.0192{col 63}{txt}max{col 67}={col 69}{res}     4,748
+
+{txt}{col 49}Wald chi2({res}10{txt}){col 67}={col 70}{res} 39933.87
+{txt}corr(u_i, Xb){col 16}= {res}-0.3894{txt}{col 49}Prob > chi2{col 67}={col 73}{res}0.0000
+
+{txt}{hline 19}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1} accident_occurred{col 20}{c |}      Coef.{col 32}   Std. Err.{col 44}      z{col 52}   P>|z|{col 60}     [95% Con{col 73}f. Interval]
+{hline 19}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 9}mean_pm25 {c |}{col 20}{res}{space 2}  .000076{col 32}{space 2}  .000031{col 43}{space 1}    2.45{col 52}{space 3}0.014{col 60}{space 4} .0000152{col 73}{space 3} .0001368
+{txt}{space 2}mean_temperature {c |}{col 20}{res}{space 2}-4.16e-06{col 32}{space 2} 3.80e-06{col 43}{space 1}   -1.09{col 52}{space 3}0.274{col 60}{space 4}-.0000116{col 73}{space 3} 3.29e-06
+{txt}mean_precipitation {c |}{col 20}{res}{space 2}-4.61e-06{col 32}{space 2} 4.25e-06{col 43}{space 1}   -1.09{col 52}{space 3}0.278{col 60}{space 4}-.0000129{col 73}{space 3} 3.71e-06
+{txt}{space 8}employment {c |}{col 20}{res}{space 2} 9.01e-07{col 32}{space 2} 6.84e-09{col 43}{space 1}  131.65{col 52}{space 3}0.000{col 60}{space 4} 8.87e-07{col 73}{space 3} 9.14e-07
+{txt}{space 18} {c |}
+{space 11}weekday {c |}
+{space 16}2  {c |}{col 20}{res}{space 2} .0011917{col 32}{space 2} .0000306{col 43}{space 1}   39.00{col 52}{space 3}0.000{col 60}{space 4} .0011318{col 73}{space 3} .0012516
+{txt}{space 16}3  {c |}{col 20}{res}{space 2} .0012164{col 32}{space 2} .0000311{col 43}{space 1}   39.17{col 52}{space 3}0.000{col 60}{space 4} .0011555{col 73}{space 3} .0012772
+{txt}{space 16}4  {c |}{col 20}{res}{space 2} .0012075{col 32}{space 2} .0000315{col 43}{space 1}   38.32{col 52}{space 3}0.000{col 60}{space 4} .0011457{col 73}{space 3} .0012692
+{txt}{space 16}5  {c |}{col 20}{res}{space 2} .0011503{col 32}{space 2} .0000317{col 43}{space 1}   36.24{col 52}{space 3}0.000{col 60}{space 4} .0010881{col 73}{space 3} .0012126
+{txt}{space 16}6  {c |}{col 20}{res}{space 2} .0009903{col 32}{space 2} .0000319{col 43}{space 1}   31.07{col 52}{space 3}0.000{col 60}{space 4} .0009278{col 73}{space 3} .0010528
+{txt}{space 16}7  {c |}{col 20}{res}{space 2} .0002894{col 32}{space 2} .0000314{col 43}{space 1}    9.21{col 52}{space 3}0.000{col 60}{space 4} .0002278{col 73}{space 3}  .000351
+{txt}{space 18} {c |}
+{space 13}_cons {c |}{col 20}{res}{space 2}-.0011176{col 32}{space 2} .0008193{col 43}{space 1}   -1.36{col 52}{space 3}0.173{col 60}{space 4}-.0027234{col 73}{space 3} .0004882
+{txt}{hline 19}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+           sigma_u {c |} {res} .00457327
+           {txt}sigma_e {c |} {res} .03131639
+               {txt}rho {c |} {res} .02088071{txt}   (fraction of variance due to u_i)
+{hline 19}{c BT}{hline 64}
+F  test that all u_i=0:     F({res}3107{txt},{res}14707568{txt}) = {res}   84.92{col 59}{txt}Prob > F    = {res}0.0000
+{txt}{hline 84}
+{p 0 16 85}Instrumented:{space 3}mean_pm25{p_end}
+{p 0 16 85}Instruments:{space 4}mean_temperature mean_precipitation employment 2.weekday 3.weekday 4.weekday 5.weekday 6.weekday 7.weekday inversion_coverage{p_end}
+{hline 84}
+
+{com}. xtivreg accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25_log = inversion_coverage), fe
+{res}
+{txt}Fixed-effects (within) IV regression{col 49}Number of obs{col 67}={col 69}{res}14,710,686
+{txt}Group variable: {res}fips{txt}{col 49}Number of groups{col 67}={col 69}{res}     3,108
+
+{txt}R-sq:{col 49}Obs per group:
+     within  = {res}0.0016{col 63}{txt}min{col 67}={col 69}{res}       365
+{txt}     between = {res}0.5053{col 63}{txt}avg{col 67}={col 69}{res}   4,733.2
+{txt}     overall = {res}0.0192{col 63}{txt}max{col 67}={col 69}{res}     4,748
+
+{txt}{col 49}Wald chi2({res}10{txt}){col 67}={col 70}{res} 39934.63
+{txt}corr(u_i, Xb){col 16}= {res}-0.3920{txt}{col 49}Prob > chi2{col 67}={col 73}{res}0.0000
+
+{txt}{hline 19}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1} accident_occurred{col 20}{c |}      Coef.{col 32}   Std. Err.{col 44}      z{col 52}   P>|z|{col 60}     [95% Con{col 73}f. Interval]
+{hline 19}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 5}mean_pm25_log {c |}{col 20}{res}{space 2} .0006802{col 32}{space 2} .0002775{col 43}{space 1}    2.45{col 52}{space 3}0.014{col 60}{space 4} .0001364{col 73}{space 3}  .001224
+{txt}{space 2}mean_temperature {c |}{col 20}{res}{space 2}-5.20e-06{col 32}{space 2} 4.22e-06{col 43}{space 1}   -1.23{col 52}{space 3}0.217{col 60}{space 4}-.0000135{col 73}{space 3} 3.06e-06
+{txt}mean_precipitation {c |}{col 20}{res}{space 2}-2.99e-06{col 32}{space 2} 4.89e-06{col 43}{space 1}   -0.61{col 52}{space 3}0.541{col 60}{space 4}-.0000126{col 73}{space 3} 6.59e-06
+{txt}{space 8}employment {c |}{col 20}{res}{space 2} 9.02e-07{col 32}{space 2} 6.66e-09{col 43}{space 1}  135.39{col 52}{space 3}0.000{col 60}{space 4} 8.89e-07{col 73}{space 3} 9.15e-07
+{txt}{space 18} {c |}
+{space 11}weekday {c |}
+{space 16}2  {c |}{col 20}{res}{space 2} .0011911{col 32}{space 2} .0000306{col 43}{space 1}   38.98{col 52}{space 3}0.000{col 60}{space 4} .0011312{col 73}{space 3}  .001251
+{txt}{space 16}3  {c |}{col 20}{res}{space 2} .0012173{col 32}{space 2}  .000031{col 43}{space 1}   39.29{col 52}{space 3}0.000{col 60}{space 4} .0011566{col 73}{space 3}  .001278
+{txt}{space 16}4  {c |}{col 20}{res}{space 2} .0012086{col 32}{space 2} .0000314{col 43}{space 1}   38.50{col 52}{space 3}0.000{col 60}{space 4} .0011471{col 73}{space 3} .0012702
+{txt}{space 16}5  {c |}{col 20}{res}{space 2} .0011508{col 32}{space 2} .0000317{col 43}{space 1}   36.32{col 52}{space 3}0.000{col 60}{space 4} .0010887{col 73}{space 3} .0012129
+{txt}{space 16}6  {c |}{col 20}{res}{space 2}   .00099{col 32}{space 2} .0000319{col 43}{space 1}   31.03{col 52}{space 3}0.000{col 60}{space 4} .0009275{col 73}{space 3} .0010525
+{txt}{space 16}7  {c |}{col 20}{res}{space 2} .0002884{col 32}{space 2} .0000315{col 43}{space 1}    9.15{col 52}{space 3}0.000{col 60}{space 4} .0002266{col 73}{space 3} .0003502
+{txt}{space 18} {c |}
+{space 13}_cons {c |}{col 20}{res}{space 2}-.0015014{col 32}{space 2} .0006709{col 43}{space 1}   -2.24{col 52}{space 3}0.025{col 60}{space 4}-.0028164{col 73}{space 3}-.0001864
+{txt}{hline 19}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+           sigma_u {c |} {res} .00458166
+           {txt}sigma_e {c |} {res} .03131609
+               {txt}rho {c |} {res} .02095622{txt}   (fraction of variance due to u_i)
+{hline 19}{c BT}{hline 64}
+F  test that all u_i=0:     F({res}3107{txt},{res}14707568{txt}) = {res}   85.03{col 59}{txt}Prob > F    = {res}0.0000
+{txt}{hline 84}
+{p 0 16 85}Instrumented:{space 3}mean_pm25_log{p_end}
+{p 0 16 85}Instruments:{space 4}mean_temperature mean_precipitation employment 2.weekday 3.weekday 4.weekday 5.weekday 6.weekday 7.weekday inversion_coverage{p_end}
+{hline 84}
+
+{com}. 
+{txt}end of do-file
+
+{com}. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+{txt}
+{com}. ivreg2 accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 = inversion_coverage), gmm2s dkraay(7)
+{res}{txt}Warning: time variable {res}date{txt} has {res}90{txt} gap(s) in relevant range
+{res}{err}{hline 2}Break{hline 2}
+{txt}{search r(1), local:r(1);}
+
+end of do-file
+
+{err}{hline 2}Break{hline 2}
+{txt}{search r(1), local:r(1);}
+
+{com}. histogram mean_pm25
+{txt}(bin={res}71{txt}, start={res}.01679633{txt}, width={res}2.4727751{txt})
+{res}
+{com}. egen pm25_bins = cut(mean_pm25), at(0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 5000)
+{txt}(531855 missing values generated)
+
+{com}. histogram mean_pm25
+{txt}(bin={res}71{txt}, start={res}.01679633{txt}, width={res}2.4727751{txt})
+{res}
+{com}. sum mean_pm25
+
+{txt}    Variable {c |}        Obs        Mean    Std. Dev.       Min        Max
+{hline 13}{c +}{hline 57}
+{space 3}mean_pm25 {c |}{res} 14,756,705    8.953793    5.631363   .0167963   175.5838
+
+{com}. count if mean_pm25 == .
+  {res}531,855
+
+{com}. browse if mean_pm25 == .
+
+. tab fips if mean_pm25 == .
+
+       {txt}fips {c |}      Freq.     Percent        Cum.
+{hline 12}{c +}{hline 35}
+       1019 {c |}{res}          1        0.00        0.00
+{txt}       1029 {c |}{res}          1        0.00        0.00
+{txt}       1055 {c |}{res}          1        0.00        0.00
+{txt}       1089 {c |}{res}          1        0.00        0.00
+{txt}       1095 {c |}{res}          1        0.00        0.00
+{txt}       2013 {c |}{res}      4,748        0.89        0.89
+{txt}       2016 {c |}{res}      4,748        0.89        1.79
+{txt}       2020 {c |}{res}      4,748        0.89        2.68
+{txt}       2050 {c |}{res}      4,748        0.89        3.57
+{txt}       2060 {c |}{res}      4,748        0.89        4.46
+{txt}       2068 {c |}{res}      4,748        0.89        5.36
+{txt}       2070 {c |}{res}      4,748        0.89        6.25
+{txt}       2090 {c |}{res}      4,748        0.89        7.14
+{txt}       2100 {c |}{res}      4,748        0.89        8.04
+{txt}       2105 {c |}{res}      4,748        0.89        8.93
+{txt}       2110 {c |}{res}      4,748        0.89        9.82
+{txt}       2122 {c |}{res}      4,748        0.89       10.71
+{txt}       2130 {c |}{res}      4,748        0.89       11.61
+{txt}       2150 {c |}{res}      4,748        0.89       12.50
+{txt}       2158 {c |}{res}      4,748        0.89       13.39
+{txt}       2164 {c |}{res}      4,748        0.89       14.28
+{txt}       2170 {c |}{res}      4,748        0.89       15.18
+{txt}       2180 {c |}{res}      4,748        0.89       16.07
+{txt}       2185 {c |}{res}      4,748        0.89       16.96
+{txt}       2188 {c |}{res}      4,748        0.89       17.86
+{txt}       2195 {c |}{res}      4,748        0.89       18.75
+{txt}       2198 {c |}{res}      4,748        0.89       19.64
+{txt}       2220 {c |}{res}      4,748        0.89       20.53
+{txt}       2230 {c |}{res}      4,748        0.89       21.43
+{txt}       2240 {c |}{res}      4,748        0.89       22.32
+{txt}       2261 {c |}{res}      4,748        0.89       23.21
+{txt}       2275 {c |}{res}      4,748        0.89       24.10
+{txt}       2282 {c |}{res}      4,748        0.89       25.00
+{txt}       2290 {c |}{res}      4,748        0.89       25.89
+{txt}      12003 {c |}{res}          1        0.00       25.89
+{txt}      13003 {c |}{res}          1        0.00       25.89
+{txt}      13017 {c |}{res}          1        0.00       25.89
+{txt}      13019 {c |}{res}          1        0.00       25.89
+{txt}      13045 {c |}{res}          1        0.00       25.89
+{txt}      13065 {c |}{res}          1        0.00       25.89
+{txt}      13069 {c |}{res}          1        0.00       25.89
+{txt}      13075 {c |}{res}          1        0.00       25.89
+{txt}      13077 {c |}{res}          1        0.00       25.89
+{txt}      13079 {c |}{res}          1        0.00       25.89
+{txt}      13081 {c |}{res}          1        0.00       25.89
+{txt}      13093 {c |}{res}          1        0.00       25.89
+{txt}      13097 {c |}{res}          1        0.00       25.89
+{txt}      13101 {c |}{res}          1        0.00       25.89
+{txt}      13113 {c |}{res}          1        0.00       25.89
+{txt}      13149 {c |}{res}          1        0.00       25.89
+{txt}      13153 {c |}{res}          1        0.00       25.89
+{txt}      13155 {c |}{res}          1        0.00       25.89
+{txt}      13171 {c |}{res}          1        0.00       25.89
+{txt}      13173 {c |}{res}          1        0.00       25.89
+{txt}      13193 {c |}{res}          1        0.00       25.89
+{txt}      13197 {c |}{res}          1        0.00       25.89
+{txt}      13199 {c |}{res}          1        0.00       25.89
+{txt}      13225 {c |}{res}          1        0.00       25.89
+{txt}      13231 {c |}{res}          1        0.00       25.89
+{txt}      13235 {c |}{res}          1        0.00       25.89
+{txt}      13249 {c |}{res}          1        0.00       25.90
+{txt}      13255 {c |}{res}          1        0.00       25.90
+{txt}      13263 {c |}{res}          1        0.00       25.90
+{txt}      13269 {c |}{res}          1        0.00       25.90
+{txt}      13277 {c |}{res}          1        0.00       25.90
+{txt}      13285 {c |}{res}          1        0.00       25.90
+{txt}      13287 {c |}{res}          1        0.00       25.90
+{txt}      13293 {c |}{res}          1        0.00       25.90
+{txt}      13299 {c |}{res}          1        0.00       25.90
+{txt}      13315 {c |}{res}          1        0.00       25.90
+{txt}      15001 {c |}{res}      4,748        0.89       26.79
+{txt}      15003 {c |}{res}      4,748        0.89       27.68
+{txt}      15005 {c |}{res}      4,748        0.89       28.57
+{txt}      15007 {c |}{res}      4,748        0.89       29.47
+{txt}      15009 {c |}{res}      4,748        0.89       30.36
+{txt}      17003 {c |}{res}          1        0.00       30.36
+{txt}      17077 {c |}{res}          1        0.00       30.36
+{txt}      17087 {c |}{res}          1        0.00       30.36
+{txt}      17127 {c |}{res}          1        0.00       30.36
+{txt}      17133 {c |}{res}          1        0.00       30.36
+{txt}      17153 {c |}{res}          1        0.00       30.36
+{txt}      17157 {c |}{res}          1        0.00       30.36
+{txt}      17181 {c |}{res}          1        0.00       30.36
+{txt}      21007 {c |}{res}          1        0.00       30.36
+{txt}      21035 {c |}{res}          1        0.00       30.36
+{txt}      21039 {c |}{res}          1        0.00       30.36
+{txt}      21083 {c |}{res}          1        0.00       30.36
+{txt}      21105 {c |}{res}          1        0.00       30.36
+{txt}      21145 {c |}{res}          1        0.00       30.36
+{txt}      21157 {c |}{res}          1        0.00       30.36
+{txt}      29007 {c |}{res}          1        0.00       30.36
+{txt}      29099 {c |}{res}          1        0.00       30.36
+{txt}      29113 {c |}{res}          1        0.00       30.36
+{txt}      29137 {c |}{res}          1        0.00       30.36
+{txt}      29139 {c |}{res}          1        0.00       30.36
+{txt}      29157 {c |}{res}          1        0.00       30.36
+{txt}      29163 {c |}{res}          1        0.00       30.36
+{txt}      29173 {c |}{res}          1        0.00       30.36
+{txt}      29186 {c |}{res}          1        0.00       30.36
+{txt}      29205 {c |}{res}          1        0.00       30.37
+{txt}      29219 {c |}{res}          1        0.00       30.37
+{txt}      32510 {c |}{res}          1        0.00       30.37
+{txt}      47005 {c |}{res}          1        0.00       30.37
+{txt}      47043 {c |}{res}          1        0.00       30.37
+{txt}      47055 {c |}{res}          1        0.00       30.37
+{txt}      47081 {c |}{res}          1        0.00       30.37
+{txt}      47083 {c |}{res}          1        0.00       30.37
+{txt}      47085 {c |}{res}          1        0.00       30.37
+{txt}      47101 {c |}{res}          1        0.00       30.37
+{txt}      47103 {c |}{res}          1        0.00       30.37
+{txt}      47117 {c |}{res}          1        0.00       30.37
+{txt}      47119 {c |}{res}          1        0.00       30.37
+{txt}      47127 {c |}{res}          1        0.00       30.37
+{txt}      72001 {c |}{res}      4,748        0.89       31.26
+{txt}      72003 {c |}{res}      4,748        0.89       32.15
+{txt}      72005 {c |}{res}      4,748        0.89       33.05
+{txt}      72007 {c |}{res}      4,748        0.89       33.94
+{txt}      72009 {c |}{res}      4,748        0.89       34.83
+{txt}      72011 {c |}{res}      4,748        0.89       35.72
+{txt}      72013 {c |}{res}      4,748        0.89       36.62
+{txt}      72015 {c |}{res}      4,748        0.89       37.51
+{txt}      72017 {c |}{res}      4,748        0.89       38.40
+{txt}      72019 {c |}{res}      4,748        0.89       39.29
+{txt}      72021 {c |}{res}      4,748        0.89       40.19
+{txt}      72023 {c |}{res}      4,748        0.89       41.08
+{txt}      72025 {c |}{res}      4,748        0.89       41.97
+{txt}      72027 {c |}{res}      4,748        0.89       42.87
+{txt}      72029 {c |}{res}      4,748        0.89       43.76
+{txt}      72031 {c |}{res}      4,748        0.89       44.65
+{txt}      72033 {c |}{res}      4,748        0.89       45.54
+{txt}      72035 {c |}{res}      4,748        0.89       46.44
+{txt}      72037 {c |}{res}      4,748        0.89       47.33
+{txt}      72039 {c |}{res}      4,748        0.89       48.22
+{txt}      72041 {c |}{res}      4,748        0.89       49.11
+{txt}      72043 {c |}{res}      4,748        0.89       50.01
+{txt}      72045 {c |}{res}      4,748        0.89       50.90
+{txt}      72047 {c |}{res}      4,748        0.89       51.79
+{txt}      72049 {c |}{res}      4,748        0.89       52.69
+{txt}      72051 {c |}{res}      4,748        0.89       53.58
+{txt}      72053 {c |}{res}      4,748        0.89       54.47
+{txt}      72054 {c |}{res}      4,748        0.89       55.36
+{txt}      72055 {c |}{res}      4,748        0.89       56.26
+{txt}      72057 {c |}{res}      4,748        0.89       57.15
+{txt}      72059 {c |}{res}      4,748        0.89       58.04
+{txt}      72061 {c |}{res}      4,748        0.89       58.93
+{txt}      72063 {c |}{res}      4,748        0.89       59.83
+{txt}      72065 {c |}{res}      4,748        0.89       60.72
+{txt}      72067 {c |}{res}      4,748        0.89       61.61
+{txt}      72069 {c |}{res}      4,748        0.89       62.51
+{txt}      72071 {c |}{res}      4,748        0.89       63.40
+{txt}      72073 {c |}{res}      4,748        0.89       64.29
+{txt}      72075 {c |}{res}      4,748        0.89       65.18
+{txt}      72077 {c |}{res}      4,748        0.89       66.08
+{txt}      72079 {c |}{res}      4,748        0.89       66.97
+{txt}      72081 {c |}{res}      4,748        0.89       67.86
+{txt}      72083 {c |}{res}      4,748        0.89       68.75
+{txt}      72085 {c |}{res}      4,748        0.89       69.65
+{txt}      72087 {c |}{res}      4,748        0.89       70.54
+{txt}      72089 {c |}{res}      4,748        0.89       71.43
+{txt}      72091 {c |}{res}      4,748        0.89       72.33
+{txt}      72093 {c |}{res}      4,748        0.89       73.22
+{txt}      72095 {c |}{res}      4,748        0.89       74.11
+{txt}      72097 {c |}{res}      4,748        0.89       75.00
+{txt}      72099 {c |}{res}      4,748        0.89       75.90
+{txt}      72101 {c |}{res}      4,748        0.89       76.79
+{txt}      72103 {c |}{res}      4,748        0.89       77.68
+{txt}      72105 {c |}{res}      4,748        0.89       78.57
+{txt}      72107 {c |}{res}      4,748        0.89       79.47
+{txt}      72109 {c |}{res}      4,748        0.89       80.36
+{txt}      72111 {c |}{res}      4,748        0.89       81.25
+{txt}      72113 {c |}{res}      4,748        0.89       82.15
+{txt}      72115 {c |}{res}      4,748        0.89       83.04
+{txt}      72117 {c |}{res}      4,748        0.89       83.93
+{txt}      72119 {c |}{res}      4,748        0.89       84.82
+{txt}      72121 {c |}{res}      4,748        0.89       85.72
+{txt}      72123 {c |}{res}      4,748        0.89       86.61
+{txt}      72125 {c |}{res}      4,748        0.89       87.50
+{txt}      72127 {c |}{res}      4,748        0.89       88.39
+{txt}      72129 {c |}{res}      4,748        0.89       89.29
+{txt}      72131 {c |}{res}      4,748        0.89       90.18
+{txt}      72133 {c |}{res}      4,748        0.89       91.07
+{txt}      72135 {c |}{res}      4,748        0.89       91.97
+{txt}      72137 {c |}{res}      4,748        0.89       92.86
+{txt}      72139 {c |}{res}      4,748        0.89       93.75
+{txt}      72141 {c |}{res}      4,748        0.89       94.64
+{txt}      72143 {c |}{res}      4,748        0.89       95.54
+{txt}      72145 {c |}{res}      4,748        0.89       96.43
+{txt}      72147 {c |}{res}      4,748        0.89       97.32
+{txt}      72149 {c |}{res}      4,748        0.89       98.21
+{txt}      72151 {c |}{res}      4,748        0.89       99.11
+{txt}      72153 {c |}{res}      4,748        0.89      100.00
+{txt}{hline 12}{c +}{hline 35}
+      Total {c |}{res}    531,855      100.00
+
+{com}. browse if fips == 13277
+
+. browse if fips == 13277 & mean_pm25 == .
+
+. browse if fips == 47117 & mean_pm25 == .
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+{txt}
+{com}. * Start with a clean slate.
+. log close _all
+      {txt}name:  {res}main
+       {txt}log:  {res}E:\Research Projects\Worker Accidents and Pollution\Regression Models\Construction_accident_analysis_log.txt
+  {txt}log type:  {res}smcl
+ {txt}closed on:  {res}21 Jul 2020, 16:01:36
+{txt}{.-}
+{smcl}
+{txt}{sf}{ul off}

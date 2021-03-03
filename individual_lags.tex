@@ -1,0 +1,56 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Lag Analysis\label{tab1}}
+\begin{tabular}{l*{5}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}&\multicolumn{1}{c}{(5)}\\
+                    &\multicolumn{1}{c}{est1}&\multicolumn{1}{c}{est2}&\multicolumn{1}{c}{est3}&\multicolumn{1}{c}{est4}&\multicolumn{1}{c}{est5}\\
+\midrule
+mean\_pm25           &   0.0000196         &    -0.00332         &   -0.000790         &   -0.000607         &  0.00000629         \\
+                    &      (0.13)         &     (-0.66)         &     (-0.23)         &     (-0.66)         &      (0.04)         \\
+\addlinespace
+mean\_temperature    &  0.00000870         &   -0.000287         &  -0.0000226         &  -0.0000243         &  0.00000504         \\
+                    &      (0.32)         &     (-0.61)         &     (-0.17)         &     (-0.81)         &      (0.27)         \\
+\addlinespace
+mean\_precipitation  &  -0.0000164         &   -0.000423         &   -0.000180         &   -0.000127         &  -0.0000182         \\
+                    &     (-0.58)         &     (-0.70)         &     (-0.25)         &     (-0.76)         &     (-0.64)         \\
+\addlinespace
+employment          & 0.000000513         &  0.00000128         & 0.000000428         & 0.000000446         & 0.000000458         \\
+                    &      (0.92)         &      (0.92)         &      (0.73)         &      (0.72)         &      (0.71)         \\
+\addlinespace
+weekday==     2.0000&     0.00148\sym{***}&     0.00176\sym{***}&     0.00117         &     0.00137\sym{***}&     0.00152\sym{***}\\
+                    &      (7.71)         &      (3.57)         &      (0.79)         &      (4.86)         &      (7.95)         \\
+\addlinespace
+weekday==     3.0000&     0.00168\sym{***}&     0.00295         &    0.000920         &     0.00186\sym{***}&     0.00169\sym{***}\\
+                    &      (8.73)         &      (1.48)         &      (0.28)         &      (6.35)         &      (8.88)         \\
+\addlinespace
+weekday==     4.0000&     0.00174\sym{***}&     0.00305         &     0.00124         &     0.00176\sym{***}&     0.00175\sym{***}\\
+                    &      (8.78)         &      (1.48)         &      (0.56)         &      (8.82)         &      (8.90)         \\
+\addlinespace
+weekday==     5.0000&     0.00168\sym{***}&     0.00163\sym{***}&     0.00122         &     0.00113         &     0.00170\sym{***}\\
+                    &      (9.35)         &      (8.27)         &      (0.60)         &      (1.50)         &      (9.04)         \\
+\addlinespace
+weekday==     6.0000&     0.00154\sym{***}&     0.00332         &     0.00114         &     0.00125\sym{**} &     0.00155\sym{***}\\
+                    &      (8.91)         &      (1.21)         &      (0.64)         &      (3.06)         &      (8.93)         \\
+\addlinespace
+weekday==     7.0000&    0.000450\sym{***}&     0.00265         &    0.000273         &    0.000648\sym{*}  &    0.000467\sym{***}\\
+                    &      (5.32)         &      (0.79)         &      (0.32)         &      (2.38)         &      (5.16)         \\
+\addlinespace
+L.mean\_pm25         &                     &     0.00466         &                     &                     &                     \\
+                    &                     &      (0.65)         &                     &                     &                     \\
+\addlinespace
+L3.mean\_pm25        &                     &                     &     0.00119         &                     &                     \\
+                    &                     &                     &      (0.23)         &                     &                     \\
+\addlinespace
+L5.mean\_pm25        &                     &                     &                     &     0.00111         &                     \\
+                    &                     &                     &                     &      (0.77)         &                     \\
+\addlinespace
+L7.mean\_pm25        &                     &                     &                     &                     &   0.0000482         \\
+                    &                     &                     &                     &                     &      (0.20)         \\
+\midrule
+Observations        &     1131865         &     1128764         &     1122562         &     1116360         &     1110158         \\
+\bottomrule
+\multicolumn{6}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{6}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}

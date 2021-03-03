@@ -98,12 +98,12 @@ replace accident_occurred = 0 if accident_occurred == .
 * effects approach rather than fixed effects, because unconditional fixed 
 * effects estimates are biased.
 eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment i.weekday (mean_pm25 = inversion_coverage), vce(cluster fips) first
-eststo: margins, dydx(_all) predict(pr)
+version 14.0: eststo: margins, dydx(_all) predict(pr)
 
 preserve
 drop if weekday < 2 | weekday > 6
 eststo: ivprobit accident_occurred mean_temperature mean_precipitation employment (mean_pm25 = inversion_coverage), vce(cluster fips) first
-eststo: margins, dydx(_all) predict(pr)
+version 14.0: eststo: margins, dydx(_all) predict(pr)
 restore
 
 * Save the stored regressions as latex and rtf tables, then clear them so I can save the next batch.

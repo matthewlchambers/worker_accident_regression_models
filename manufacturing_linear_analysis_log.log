@@ -1,0 +1,251 @@
+---------------------------------------------------------------------------------------------------------------------------------
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\manufacturing_linear_analysis_log.log
+  log type:  text
+ opened on:   2 Mar 2021, 19:02:21
+
+. 
+. * Import the clean data file, produced using R. I'm using Stata for the analysis.
+. * because Stata works with panel data a little easier.
+. import delimited "../Data/Data for Regression Models/`industry'_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+(20 vars, 15,288,560 obs)
+
+. 
+. * Take a smaller sample for local code testing
+. keep if strpos(date, "2005")
+(14,113,260 observations deleted)
+
+. 
+. ********* End of section to change when switching between local and ACCRE ******
+. 
+. ********* Basic fixes to data file, applicable to every regression *************
+. 
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+
+. drop date
+
+. rename temporary_date date
+
+. format date %td
+
+. 
+. * Create a month variable so I can absorb month-of-year fixed effects
+. gen month = month(date)
+
+. 
+. * Create weekday dummy variables, since ivreg2 can't handle factor variables
+. tabulate weekday, generate(weekday_dummy_)
+
+    weekday |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |    167,440       14.25       14.25
+          2 |    167,440       14.25       28.49
+          3 |    167,440       14.25       42.74
+          4 |    167,440       14.25       56.99
+          5 |    167,440       14.25       71.23
+          6 |    167,440       14.25       85.48
+          7 |    170,660       14.52      100.00
+------------+-----------------------------------
+      Total |  1,175,300      100.00
+
+. drop weekday_dummy_1
+
+. 
+. * Destring mean_pm25 and other variables because somehow they imported strangely
+. destring mean_pm25, force replace
+mean_pm25: contains nonnumeric characters; replaced as double
+(40880 missing values generated)
+
+. destring qtrly_estabs, force replace     // Note that some of these are actually
+qtrly_estabs: contains nonnumeric characters; replaced as int
+(23725 missing values generated)
+
+. destring employment, force replace               // missing for some industries in 2005
+employment: contains nonnumeric characters; replaced as long
+(23725 missing values generated)
+
+. destring total_employment, force replace //
+total_employment: contains nonnumeric characters; replaced as long
+(23725 missing values generated)
+
+. 
+. * Drop any observations from Alaska, Hawaii, or Puerto Rico.
+. drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72
+(40,880 observations deleted)
+
+. 
+. * Declare the data as panel data.
+. xtset fips date
+       panel variable:  fips (strongly balanced)
+        time variable:  date, 01jan2005 to 31dec2005
+                delta:  1 day
+
+. 
+. * Make a binary for an accident occurring.
+. gen accident_occurred = 1 if num_accidents > 0
+(1,133,421 missing values generated)
+
+. replace accident_occurred = 0 if accident_occurred == .
+(1,133,421 real changes made)
+
+. 
+. ********* End basic fixes to data file, applicable to every regression *********
+. 
+. * Do a batch of simple linear iv regressions with different fixed effects and different clustering
+. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_cover
+> age), absorb(fips) cluster(fips) first
+(MWFE estimator converged in 1 iterations)
+
+First-stage regressions
+-----------------------
+
+
+First-stage regression of mean_pm25:
+
+Statistics robust to heteroskedasticity and clustering on fips
+Number of obs =                1113250
+Number of clusters (fips) =       3050
+------------------------------------------------------------------------------------
+                   |               Robust
+         mean_pm25 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+inversion_coverage |   .7359477   .0377806    19.48   0.000     .6618989    .8099964
+  mean_temperature |   .1814901    .002856    63.55   0.000     .1758924    .1870879
+mean_precipitation |  -.1904825   .0016161  -117.86   0.000    -.1936501    -.187315
+        employment |  -.0003724   .0001317    -2.83   0.005    -.0006306   -.0001141
+   weekday_dummy_2 |   -.167931   .0086142   -19.49   0.000    -.1848145   -.1510476
+   weekday_dummy_3 |  -.2036472    .008595   -23.69   0.000    -.2204931   -.1868013
+   weekday_dummy_4 |   -.113585   .0151036    -7.52   0.000    -.1431876   -.0839824
+   weekday_dummy_5 |  -.2635605   .0172397   -15.29   0.000    -.2973498   -.2297712
+   weekday_dummy_6 |  -.0542193   .0175695    -3.09   0.002    -.0886548   -.0197837
+   weekday_dummy_7 |   .2176475   .0134275    16.21   0.000       .19133     .243965
+------------------------------------------------------------------------------------
+F test of excluded instruments:
+  F(  1,  3049) =   379.45
+  Prob > F      =   0.0000
+Sanderson-Windmeijer multivariate F test of excluded instruments:
+  F(  1,  3049) =   379.45
+  Prob > F      =   0.0000
+
+
+
+Summary results for first-stage regressions
+-------------------------------------------
+
+                                           (Underid)            (Weak id)
+Variable     | F(  1,  3049)  P-val | SW Chi-sq(  1) P-val | SW F(  1,  3049)
+mean_pm25    |     379.45    0.0000 |      379.58   0.0000 |      379.45
+
+NB: first-stage test statistics cluster-robust
+
+Stock-Yogo weak ID F test critical values for single endogenous regressor:
+                                   10% maximal IV size             16.38
+                                   15% maximal IV size              8.96
+                                   20% maximal IV size              6.66
+                                   25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for i.i.d. errors only.
+
+Underidentification test
+Ho: matrix of reduced form coefficients has rank=K1-1 (underidentified)
+Ha: matrix has rank=K1 (identified)
+Kleibergen-Paap rk LM statistic          Chi-sq(1)=326.34   P-val=0.0000
+
+Weak identification test
+Ho: equation is weakly identified
+Cragg-Donald Wald F statistic                                    1730.71
+Kleibergen-Paap Wald rk F statistic                               379.45
+
+Stock-Yogo weak ID test critical values for K1=1 and L1=1:
+                                   10% maximal IV size             16.38
+                                   15% maximal IV size              8.96
+                                   20% maximal IV size              6.66
+                                   25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
+
+Weak-instrument-robust inference
+Tests of joint significance of endogenous regressors B1 in main equation
+Ho: B1=0 and orthogonality conditions are valid
+Anderson-Rubin Wald test           F(1,3049)=      0.19     P-val=0.6612
+Anderson-Rubin Wald test           Chi-sq(1)=      0.19     P-val=0.6611
+Stock-Wright LM S statistic        Chi-sq(1)=      0.20     P-val=0.6553
+
+NB: Underidentification, weak identification and weak-identification-robust
+    test statistics cluster-robust
+
+Number of clusters             N_clust  =       3050
+Number of observations               N  =    1113250
+Number of regressors                 K  =         10
+Number of endogenous regressors      K1 =          1
+Number of instruments                L  =         10
+Number of excluded instruments       L1 =          1
+
+IV (2SLS) estimation
+--------------------
+
+Estimates efficient for homoskedasticity only
+Statistics robust to heteroskedasticity and clustering on fips
+
+Number of clusters (fips) =       3050                Number of obs =  1113250
+                                                      F( 10,  3049) =     4.89
+                                                      Prob > F      =   0.0000
+Total (centered) SS     =  916.9424658                Centered R2   =   0.0001
+Total (uncentered) SS   =  916.9424658                Uncentered R2 =   0.0001
+Residual SS             =  916.8615485                Root MSE      =    .0287
+
+------------------------------------------------------------------------------------
+                   |               Robust
+ accident_occurred |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------------+----------------------------------------------------------------
+         mean_pm25 |  -.0000415   .0000947    -0.44   0.661    -.0002272    .0001441
+  mean_temperature |   7.46e-06   .0000173     0.43   0.666    -.0000265    .0000414
+mean_precipitation |  -.0000117   .0000185    -0.63   0.530     -.000048    .0000247
+        employment |  -1.46e-07   5.87e-07    -0.25   0.803    -1.30e-06    1.01e-06
+   weekday_dummy_2 |   .0008897   .0001719     5.18   0.000     .0005527    .0012267
+   weekday_dummy_3 |   .0009186   .0001837     5.00   0.000     .0005584    .0012788
+   weekday_dummy_4 |   .0008089   .0001778     4.55   0.000     .0004602    .0011576
+   weekday_dummy_5 |    .001024   .0001952     5.25   0.000     .0006414    .0014067
+   weekday_dummy_6 |   .0008677   .0001643     5.28   0.000     .0005454    .0011899
+   weekday_dummy_7 |   .0002587   .0000919     2.82   0.005     .0000785    .0004388
+------------------------------------------------------------------------------------
+Underidentification test (Kleibergen-Paap rk LM statistic):            326.339
+                                                   Chi-sq(1) P-val =    0.0000
+------------------------------------------------------------------------------
+Weak identification test (Cragg-Donald Wald F statistic):             1730.708
+                         (Kleibergen-Paap rk Wald F statistic):        379.451
+Stock-Yogo weak ID test critical values: 10% maximal IV size             16.38
+                                         15% maximal IV size              8.96
+                                         20% maximal IV size              6.66
+                                         25% maximal IV size              5.53
+Source: Stock-Yogo (2005).  Reproduced by permission.
+NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
+------------------------------------------------------------------------------
+Hansen J statistic (overidentification test of all instruments):         0.000
+                                                 (equation exactly identified)
+------------------------------------------------------------------------------
+Instrumented:         mean_pm25
+Included instruments: mean_temperature mean_precipitation employment
+                      weekday_dummy_2 weekday_dummy_3 weekday_dummy_4
+                      weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
+Excluded instruments: inversion_coverage
+Partialled-out:       _cons
+                      nb: total SS, model F and R2s are after partialling-out;
+                          any small-sample adjustments include partialled-out
+                          variables in regressor count K
+------------------------------------------------------------------------------
+
+Absorbed degrees of freedom:
+-----------------------------------------------------+
+ Absorbed FE | Categories  - Redundant  = Num. Coefs |
+-------------+---------------------------------------|
+        fips |      3050        3050           0    *|
+-----------------------------------------------------+
+* = FE nested within cluster; treated as redundant for DoF computation
+(est1 stored)
+
+. 
+end of do-file
+
+. exit, clear

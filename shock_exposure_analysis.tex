@@ -1,0 +1,47 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Shock vs. Exposure\label{tab1}}
+\begin{tabular}{l*{1}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}\\
+                    &\multicolumn{1}{c}{Shock vs. Exposure}\\
+\midrule
+mean\_pm25           &     0.00134         \\
+                    &      (0.63)         \\
+\addlinespace
+pm25\_shock          &    -0.00466         \\
+                    &     (-0.65)         \\
+\addlinespace
+mean\_temperature    &   -0.000287         \\
+                    &     (-0.61)         \\
+\addlinespace
+mean\_precipitation  &   -0.000423         \\
+                    &     (-0.70)         \\
+\addlinespace
+employment          &  0.00000128         \\
+                    &      (0.92)         \\
+\addlinespace
+weekday==     2.0000&     0.00176\sym{***}\\
+                    &      (3.57)         \\
+\addlinespace
+weekday==     3.0000&     0.00295         \\
+                    &      (1.48)         \\
+\addlinespace
+weekday==     4.0000&     0.00305         \\
+                    &      (1.48)         \\
+\addlinespace
+weekday==     5.0000&     0.00163\sym{***}\\
+                    &      (8.27)         \\
+\addlinespace
+weekday==     6.0000&     0.00332         \\
+                    &      (1.21)         \\
+\addlinespace
+weekday==     7.0000&     0.00265         \\
+                    &      (0.79)         \\
+\midrule
+Observations        &     1128764         \\
+\bottomrule
+\multicolumn{2}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{2}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}
