@@ -5,6 +5,7 @@ cd "E:/Research Projects/Worker Accidents and Pollution/Data/Maps"
 /* 2. Convert shapefile to Stata attribute and coordinate datasets */
 shp2dta using "../County Shapefile/cb_2016_us_county_20m.shp", data("attributes.dta") coord("coordinates.dta") ///
 genid(stid) gencentroids(cc) replace
+/* 3. Draw map */
 use attributes, clear
 
 rename STATEFP statefip
@@ -64,7 +65,7 @@ collapse (mean) inversion_coverage mean_temperature mean_precipitation mean_pm25
 	qtrly_estabs employment total_employment construction_share emp_per_est construction_per_pop accidents_per_pop ///
 	high_inversion_pm25 low_inversion_pm25 (sd) deviation_pm25=mean_pm25 (sum) num_injured num_accidents ///
 	inj_per_thousand accidents_per_thousand, by(fips)
-	
+
 gen ann_mean_inj_per_thousand = inj_per_thousand / 13
 gen ann_mean_accidents_per_thousand = accidents_per_thousand / 13
 
@@ -110,7 +111,7 @@ restore
 // save flagged_coordinates, replace
 //
 // restore
-	
+
 merge 1:1 fips using attributes, keep(match using)
 
 // spmap mean_pm25 using coordinates, id(stid) clmethod(custom) clbreaks(2 4 6 8 10 12 14) fcolor(Reds) ///
@@ -175,5 +176,3 @@ graph export "accidents_map.pdf", replace
 // 	legtitle("Construction Accidents per 100,000 Population") legend(pos(4)) ///
 // // 	polygon(data(flagged_coordinates) select(keep if more_than_ten_percent) ocolor(black) osize(thin))
 // graph export "accidents_per_pop_map.pdf", replace
-
-

@@ -37,11 +37,8 @@ relative_humidity_dir <- 'ftp://ftp.cdc.noaa.gov/Datasets/NARR/Dailies/monolevel
 relative_humidity_file <- function (year) return (paste0('rhum.2m.', year, '.nc'))
 
 # Define output parameters for the output data file(s) to be saved.
-output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Weather Data'
 output_file <- function (year, type = NULL) return (paste0(year, '_', type, '_data', '.csv'))
 
-# For testing purposes, before I run this locally using a for loop.
-#year <- 2016
 
 # Define begin and end years
 begin_year <- 2004
@@ -96,6 +93,15 @@ for (year in begin_year:end_year) {
     bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
   mean_relative_humidity_data <- relative_humidity_brick %>% exact_extract(counties, 'mean') %>%
     bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+  mean_wind_speed_data <- wind_speed_brick %>% exact_extract(counties, 'mean') %>%
+    bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+  mean_u_wind_unit_data <- u_wind_unit_brick %>% exact_extract(counties, 'mean') %>%
+    bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+  mean_v_wind_unit_data <- v_wind_unit_brick %>% exact_extract(counties, 'mean') %>%
+    bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
+  # The lines below need to be adjusted to reflect a circular mean, then uncommented
+  #mean_wind_direction_data <- wind_direction_brick %>% exact_extract(counties, 'mean') %>%
+  #  bind_cols(counties$fips %>% as.integer() %>% as_tibble() %>% rename(fips = value))
 
   # Reshape the tibbles so that each observation corresponds to a county-day, and change the date variable to
   # an R readable date variables.
