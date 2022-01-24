@@ -1,0 +1,96 @@
+-----------------------------------------------------------------------------------------------------------------------------------------
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\manufacturing_summary_statistics.log
+  log type:  text
+ opened on:  18 Mar 2021, 10:35:09
+
+. 
+. * Import the clean data file, produced using R. I'm using Stata for the analysis.
+. * because Stata works with panel data a little easier.
+. import delimited "../Data/Data for Regression Models/`industry'_accidents_2003_to_2015.csv", varnames(1) numericcols(3/25)
+(20 vars, 15,288,560 obs)
+
+. 
+. ********* End of section to change when switching between local and ACCRE ******
+. 
+. ********* Basic fixes to data file, applicable to every regression *************
+. 
+. * Replace the string date variable with one readable by Stata.
+. gen temporary_date = date(date, "YMD")
+
+. drop date
+
+. rename temporary_date date
+
+. format date %td
+
+. 
+. * Create a month variable so I can absorb month-of-year fixed effects
+. gen month = month(date)
+
+. 
+. // * Create weekday dummy variables, since ivreg2 can't handle factor variables
+. // tabulate weekday, generate(weekday_dummy_)
+. // drop weekday_dummy_1
+. 
+. * Drop any observations from Alaska, Hawaii, or Puerto Rico.
+. drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72
+(531,776 observations deleted)
+
+. 
+. * Declare the data as panel data.
+. xtset fips date
+       panel variable:  fips (strongly balanced)
+        time variable:  date, 01jan2003 to 31dec2015
+                delta:  1 day
+
+. 
+. * Make a binary for an accident occurring.
+. gen accident_occurred = 1 if num_accidents > 0
+(14,747,011 missing values generated)
+
+. replace accident_occurred = 0 if accident_occurred == .
+(14,747,011 real changes made)
+
+. 
+. * Generate heating- and cooling-degree-day measurements to capture the fact that
+. * temperature changes could plausibly have very different effects depending
+. * on the base temperature; but first, transform from kelvin to celsius
+. replace mean_temperature = mean_temperature - 273.15
+(14,756,784 real changes made)
+
+. gen heat_degree_days = mean_temperature - 18 if mean_temperature > 18
+(8,893,687 missing values generated)
+
+. replace heat_degree_days = 0 if heat_degree_days == .
+(8,893,687 real changes made)
+
+. gen cool_degree_days = 18 - mean_temperature if mean_temperature < 18
+(5,863,097 missing values generated)
+
+. replace cool_degree_days = 0 if cool_degree_days == .
+(5,863,097 real changes made)
+
+. 
+. ********* End basic fixes to data file, applicable to every regression *********
+. 
+. destring total_employment, force replace
+total_employment already numeric; no replace
+
+. 
+. collapse (mean) inversion_coverage mean_temperature mean_precipitation mean_pm25 ///
+>         qtrly_estabs employment total_employment ///
+>         (sd) deviation_pm25=mean_pm25 (sum) num_injured num_accidents, by(fips)
+
+. 
+end of do-file
+
+. do "C:\Users\Matthew Chambers\AppData\Local\Temp\STD00000000.tmp"
+
+. * Start with a clean slate.
+. log close _all
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\manufacturing_summary_statistics.log
+  log type:  text
+ closed on:  18 Mar 2021, 10:44:41
+-----------------------------------------------------------------------------------------------------------------------------------------

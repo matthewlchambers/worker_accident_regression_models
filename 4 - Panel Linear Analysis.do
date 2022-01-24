@@ -41,7 +41,7 @@ ftools, compile
 * Set the working directory.
 cd "E:/Research Projects/Worker Accidents and Pollution/Regression Models"
 
-* Set the industry
+* Set the industry. Note that for this purpose, "traffic" is an industry
 local industry "manufacturing"
 
 * Start logging
@@ -49,7 +49,7 @@ log using `industry'_linear_analysis_log.log, replace name(main)
 
 * Import the clean data file, produced using R. I'm using Stata for the analysis.
 * because Stata works with panel data a little easier.
-import delimited "../Data/Data for Regression Models/`industry'_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+import delimited "../Data/Data for Regression Models/`industry'_accidents_2003_to_2015.csv", varnames(1) numericcols(3/25)
 
 * Take a smaller sample for local code testing
 keep if strpos(date, "2005")
@@ -70,12 +70,6 @@ gen month = month(date)
 * Create weekday dummy variables, since ivreg2 can't handle factor variables
 tabulate weekday, generate(weekday_dummy_)
 drop weekday_dummy_1
-
-* Destring mean_pm25 and other variables because somehow they imported strangely
-destring mean_pm25, force replace
-destring qtrly_estabs, force replace     // Note that some of these are actually
-destring employment, force replace		 // missing for some industries/counties
-destring total_employment, force replace // in some years
 
 * Drop any observations from Alaska, Hawaii, or Puerto Rico.
 drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72

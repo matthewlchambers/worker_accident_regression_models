@@ -1,13 +1,13 @@
----------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------
       name:  main
        log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\manufacturing_linear_analysis_log.log
   log type:  text
- opened on:   2 Mar 2021, 19:02:21
+ opened on:   3 Mar 2021, 20:48:15
 
 . 
 . * Import the clean data file, produced using R. I'm using Stata for the analysis.
 . * because Stata works with panel data a little easier.
-. import delimited "../Data/Data for Regression Models/`industry'_accidents_2003_to_2015.csv", varnames(1) numericcols(3/10)
+. import delimited "../Data/Data for Regression Models/`industry'_accidents_2003_to_2015.csv", varnames(1) numericcols(3/25)
 (20 vars, 15,288,560 obs)
 
 . 
@@ -34,41 +34,9 @@
 . gen month = month(date)
 
 . 
-. * Create weekday dummy variables, since ivreg2 can't handle factor variables
-. tabulate weekday, generate(weekday_dummy_)
-
-    weekday |      Freq.     Percent        Cum.
-------------+-----------------------------------
-          1 |    167,440       14.25       14.25
-          2 |    167,440       14.25       28.49
-          3 |    167,440       14.25       42.74
-          4 |    167,440       14.25       56.99
-          5 |    167,440       14.25       71.23
-          6 |    167,440       14.25       85.48
-          7 |    170,660       14.52      100.00
-------------+-----------------------------------
-      Total |  1,175,300      100.00
-
-. drop weekday_dummy_1
-
-. 
-. * Destring mean_pm25 and other variables because somehow they imported strangely
-. destring mean_pm25, force replace
-mean_pm25: contains nonnumeric characters; replaced as double
-(40880 missing values generated)
-
-. destring qtrly_estabs, force replace     // Note that some of these are actually
-qtrly_estabs: contains nonnumeric characters; replaced as int
-(23725 missing values generated)
-
-. destring employment, force replace               // missing for some industries in 2005
-employment: contains nonnumeric characters; replaced as long
-(23725 missing values generated)
-
-. destring total_employment, force replace //
-total_employment: contains nonnumeric characters; replaced as long
-(23725 missing values generated)
-
+. // * Create weekday dummy variables, since ivreg2 can't handle factor variables
+. // tabulate weekday, generate(weekday_dummy_)
+. // drop weekday_dummy_1
 . 
 . * Drop any observations from Alaska, Hawaii, or Puerto Rico.
 . drop if floor(fips / 1000) == 2 | floor(fips / 1000) == 15 | floor(fips / 1000) == 72
@@ -90,162 +58,126 @@ total_employment: contains nonnumeric characters; replaced as long
 (1,133,421 real changes made)
 
 . 
+. * Generate heating- and cooling-degree-day measurements to capture the fact that
+. * temperature changes could plausibly have very different effects depending
+. * on the base temperature; but first, transform from kelvin to celsius
+. replace mean_temperature = mean_temperature - 273.15
+(1,134,420 real changes made)
+
+. gen heat_degree_days = mean_temperature - 18 if mean_temperature > 18
+(684,760 missing values generated)
+
+. replace heat_degree_days = 0 if heat_degree_days == .
+(684,760 real changes made)
+
+. gen cool_degree_days = 18 - mean_temperature if mean_temperature < 18
+(449,660 missing values generated)
+
+. replace cool_degree_days = 0 if cool_degree_days == .
+(449,660 real changes made)
+
+. 
 . ********* End basic fixes to data file, applicable to every regression *********
 . 
-. * Do a batch of simple linear iv regressions with different fixed effects and different clustering
-. eststo: ivreghdfe accident_occurred mean_temperature mean_precipitation employment weekday_dummy_* (mean_pm25 = inversion_cover
-> age), absorb(fips) cluster(fips) first
-(MWFE estimator converged in 1 iterations)
+. * Test out ivprobit. See https://www.statalist.org/forums/forum/general-stata-discussion/general/1305265-instrumental-variable-probit-u
+> sing-panel-data
+. * for Jeff Wooldridge saying that clustering on the panel identifier allows for
+. * valid inference with panel data using ivprobit. It is a correlated random
+. * effects approach rather than fixed effects, because unconditional fixed 
+. * effects estimates are biased.
+. eststo: ivprobit accident_occurred heat_degree_days cool_degree_days mean_precipitation employment i.weekday (mean_pm25 = meanlayer* pb
+> l_height), vce(cluster fips) first
 
-First-stage regressions
------------------------
+Fitting exogenous probit model
 
+Iteration 0:   log likelihood =  -8007.575  
+Iteration 1:   log likelihood = -6772.2754  
+Iteration 2:   log likelihood = -6549.2947  
+Iteration 3:   log likelihood = -6546.4962  
+Iteration 4:   log likelihood = -6546.4794  
+Iteration 5:   log likelihood = -6546.4794  
 
-First-stage regression of mean_pm25:
+Fitting full model
 
-Statistics robust to heteroskedasticity and clustering on fips
-Number of obs =                1113250
-Number of clusters (fips) =       3050
-------------------------------------------------------------------------------------
-                   |               Robust
-         mean_pm25 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------------+----------------------------------------------------------------
-inversion_coverage |   .7359477   .0377806    19.48   0.000     .6618989    .8099964
-  mean_temperature |   .1814901    .002856    63.55   0.000     .1758924    .1870879
-mean_precipitation |  -.1904825   .0016161  -117.86   0.000    -.1936501    -.187315
-        employment |  -.0003724   .0001317    -2.83   0.005    -.0006306   -.0001141
-   weekday_dummy_2 |   -.167931   .0086142   -19.49   0.000    -.1848145   -.1510476
-   weekday_dummy_3 |  -.2036472    .008595   -23.69   0.000    -.2204931   -.1868013
-   weekday_dummy_4 |   -.113585   .0151036    -7.52   0.000    -.1431876   -.0839824
-   weekday_dummy_5 |  -.2635605   .0172397   -15.29   0.000    -.2973498   -.2297712
-   weekday_dummy_6 |  -.0542193   .0175695    -3.09   0.002    -.0886548   -.0197837
-   weekday_dummy_7 |   .2176475   .0134275    16.21   0.000       .19133     .243965
-------------------------------------------------------------------------------------
-F test of excluded instruments:
-  F(  1,  3049) =   379.45
-  Prob > F      =   0.0000
-Sanderson-Windmeijer multivariate F test of excluded instruments:
-  F(  1,  3049) =   379.45
-  Prob > F      =   0.0000
+Iteration 0:   log pseudolikelihood = -3605260.9  
+Iteration 1:   log pseudolikelihood = -3605260.9  
 
+Probit model with endogenous regressors         Number of obs     =  1,113,250
+                                                Wald chi2(11)     =     511.70
+Log pseudolikelihood = -3605260.9               Prob > chi2       =     0.0000
 
-
-Summary results for first-stage regressions
--------------------------------------------
-
-                                           (Underid)            (Weak id)
-Variable     | F(  1,  3049)  P-val | SW Chi-sq(  1) P-val | SW F(  1,  3049)
-mean_pm25    |     379.45    0.0000 |      379.58   0.0000 |      379.45
-
-NB: first-stage test statistics cluster-robust
-
-Stock-Yogo weak ID F test critical values for single endogenous regressor:
-                                   10% maximal IV size             16.38
-                                   15% maximal IV size              8.96
-                                   20% maximal IV size              6.66
-                                   25% maximal IV size              5.53
-Source: Stock-Yogo (2005).  Reproduced by permission.
-NB: Critical values are for i.i.d. errors only.
-
-Underidentification test
-Ho: matrix of reduced form coefficients has rank=K1-1 (underidentified)
-Ha: matrix has rank=K1 (identified)
-Kleibergen-Paap rk LM statistic          Chi-sq(1)=326.34   P-val=0.0000
-
-Weak identification test
-Ho: equation is weakly identified
-Cragg-Donald Wald F statistic                                    1730.71
-Kleibergen-Paap Wald rk F statistic                               379.45
-
-Stock-Yogo weak ID test critical values for K1=1 and L1=1:
-                                   10% maximal IV size             16.38
-                                   15% maximal IV size              8.96
-                                   20% maximal IV size              6.66
-                                   25% maximal IV size              5.53
-Source: Stock-Yogo (2005).  Reproduced by permission.
-NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
-
-Weak-instrument-robust inference
-Tests of joint significance of endogenous regressors B1 in main equation
-Ho: B1=0 and orthogonality conditions are valid
-Anderson-Rubin Wald test           F(1,3049)=      0.19     P-val=0.6612
-Anderson-Rubin Wald test           Chi-sq(1)=      0.19     P-val=0.6611
-Stock-Wright LM S statistic        Chi-sq(1)=      0.20     P-val=0.6553
-
-NB: Underidentification, weak identification and weak-identification-robust
-    test statistics cluster-robust
-
-Number of clusters             N_clust  =       3050
-Number of observations               N  =    1113250
-Number of regressors                 K  =         10
-Number of endogenous regressors      K1 =          1
-Number of instruments                L  =         10
-Number of excluded instruments       L1 =          1
-
-IV (2SLS) estimation
---------------------
-
-Estimates efficient for homoskedasticity only
-Statistics robust to heteroskedasticity and clustering on fips
-
-Number of clusters (fips) =       3050                Number of obs =  1113250
-                                                      F( 10,  3049) =     4.89
-                                                      Prob > F      =   0.0000
-Total (centered) SS     =  916.9424658                Centered R2   =   0.0001
-Total (uncentered) SS   =  916.9424658                Uncentered R2 =   0.0001
-Residual SS             =  916.8615485                Root MSE      =    .0287
-
-------------------------------------------------------------------------------------
-                   |               Robust
- accident_occurred |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
--------------------+----------------------------------------------------------------
-         mean_pm25 |  -.0000415   .0000947    -0.44   0.661    -.0002272    .0001441
-  mean_temperature |   7.46e-06   .0000173     0.43   0.666    -.0000265    .0000414
-mean_precipitation |  -.0000117   .0000185    -0.63   0.530     -.000048    .0000247
-        employment |  -1.46e-07   5.87e-07    -0.25   0.803    -1.30e-06    1.01e-06
-   weekday_dummy_2 |   .0008897   .0001719     5.18   0.000     .0005527    .0012267
-   weekday_dummy_3 |   .0009186   .0001837     5.00   0.000     .0005584    .0012788
-   weekday_dummy_4 |   .0008089   .0001778     4.55   0.000     .0004602    .0011576
-   weekday_dummy_5 |    .001024   .0001952     5.25   0.000     .0006414    .0014067
-   weekday_dummy_6 |   .0008677   .0001643     5.28   0.000     .0005454    .0011899
-   weekday_dummy_7 |   .0002587   .0000919     2.82   0.005     .0000785    .0004388
-------------------------------------------------------------------------------------
-Underidentification test (Kleibergen-Paap rk LM statistic):            326.339
-                                                   Chi-sq(1) P-val =    0.0000
-------------------------------------------------------------------------------
-Weak identification test (Cragg-Donald Wald F statistic):             1730.708
-                         (Kleibergen-Paap rk Wald F statistic):        379.451
-Stock-Yogo weak ID test critical values: 10% maximal IV size             16.38
-                                         15% maximal IV size              8.96
-                                         20% maximal IV size              6.66
-                                         25% maximal IV size              5.53
-Source: Stock-Yogo (2005).  Reproduced by permission.
-NB: Critical values are for Cragg-Donald F statistic and i.i.d. errors.
-------------------------------------------------------------------------------
-Hansen J statistic (overidentification test of all instruments):         0.000
-                                                 (equation exactly identified)
-------------------------------------------------------------------------------
-Instrumented:         mean_pm25
-Included instruments: mean_temperature mean_precipitation employment
-                      weekday_dummy_2 weekday_dummy_3 weekday_dummy_4
-                      weekday_dummy_5 weekday_dummy_6 weekday_dummy_7
-Excluded instruments: inversion_coverage
-Partialled-out:       _cons
-                      nb: total SS, model F and R2s are after partialling-out;
-                          any small-sample adjustments include partialled-out
-                          variables in regressor count K
-------------------------------------------------------------------------------
-
-Absorbed degrees of freedom:
------------------------------------------------------+
- Absorbed FE | Categories  - Redundant  = Num. Coefs |
--------------+---------------------------------------|
-        fips |      3050        3050           0    *|
------------------------------------------------------+
-* = FE nested within cluster; treated as redundant for DoF computation
+                                                        (Std. Err. adjusted for 3,050 clusters in fips)
+-------------------------------------------------------------------------------------------------------
+                                      |               Robust
+                                      |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+--------------------------------------+----------------------------------------------------------------
+accident_occurred                     |
+                            mean_pm25 |   .0112152   .0074571     1.50   0.133    -.0034003    .0258308
+                     heat_degree_days |  -.0198619   .0073655    -2.70   0.007    -.0342979   -.0054258
+                     cool_degree_days |  -.0061114   .0022265    -2.74   0.006    -.0104753   -.0017476
+                   mean_precipitation |  -.0015187   .0028966    -0.52   0.600    -.0071959    .0041585
+                           employment |   6.89e-06   6.21e-07    11.09   0.000     5.67e-06    8.11e-06
+                                      |
+                              weekday |
+                                   2  |   .5290104   .0760885     6.95   0.000     .3798796    .6781412
+                                   3  |   .5430884   .0783642     6.93   0.000     .3894973    .6966795
+                                   4  |   .5016558   .0757408     6.62   0.000     .3532066     .650105
+                                   5  |   .5744414   .0763077     7.53   0.000      .424881    .7240018
+                                   6  |    .527456   .0742128     7.11   0.000     .3820016    .6729104
+                                   7  |   .2411984   .0767301     3.14   0.002     .0908101    .3915868
+                                      |
+                                _cons |  -3.723034   .0948973   -39.23   0.000    -3.909029   -3.537039
+--------------------------------------+----------------------------------------------------------------
+mean_pm25                             |
+                     heat_degree_days |   .7652498   .0085064    89.96   0.000     .7485777     .781922
+                     cool_degree_days |  -.0355966   .0045375    -7.85   0.000    -.0444899   -.0267034
+                   mean_precipitation |  -.1125086   .0016344   -68.84   0.000     -.115712   -.1093052
+                           employment |   .0000176   7.77e-06     2.26   0.024     2.36e-06    .0000328
+                                      |
+                              weekday |
+                                   2  |  -.2392408   .0087604   -27.31   0.000    -.2564109   -.2220707
+                                   3  |  -.2168994   .0097188   -22.32   0.000    -.2359479   -.1978509
+                                   4  |  -.0330339   .0136145    -2.43   0.015    -.0597177     -.00635
+                                   5  |  -.2317289   .0169175   -13.70   0.000    -.2648867   -.1985712
+                                   6  |  -.2501595   .0189468   -13.20   0.000    -.2872945   -.2130244
+                                   7  |   .1034542    .013494     7.67   0.000     .0770064    .1299019
+                                      |
+                           meanlayer1 |  -75.65052   4.364848   -17.33   0.000    -84.20547   -67.09558
+                           meanlayer2 |  -.0179899   12.03289    -0.00   0.999    -23.60201    23.56603
+                           meanlayer3 |   4.491231   13.37485     0.34   0.737    -21.72298    30.70545
+                           meanlayer4 |  -15.01321   9.096147    -1.65   0.099    -32.84133    2.814913
+                           pbl_height |  -.0054954   .0000719   -76.48   0.000    -.0056363   -.0053546
+                                _cons |   14.45929   .1000834   144.47   0.000     14.26313    14.65545
+--------------------------------------+----------------------------------------------------------------
+                           /athrho2_1 |  -.1262694   .0404519    -3.12   0.002    -.2055537   -.0469851
+                            /lnsigma2 |   1.813682   .0037362   485.44   0.000     1.806359    1.821004
+--------------------------------------+----------------------------------------------------------------
+ corr(e.mean_pm25,e.accident_occurred)|  -.1256026   .0398137                     -.2027067   -.0469506
+                       sd(e.mean_pm25)|   6.132986    .022914                      6.088239    6.178061
+-------------------------------------------------------------------------------------------------------
+Instrumented:  mean_pm25
+Instruments:   heat_degree_days cool_degree_days mean_precipitation employment 2.weekday 3.weekday
+               4.weekday 5.weekday 6.weekday 7.weekday meanlayer1 meanlayer2 meanlayer3 meanlayer4
+               pbl_height
+-------------------------------------------------------------------------------------------------------
+Wald test of exogeneity (corr = 0): chi2(1) = 9.74        Prob > chi2 = 0.0018
 (est1 stored)
 
-. 
+. version 14.0: eststo: margins, dydx(_all) predict(pr)
+--Break--
+r(1);
+
 end of do-file
 
-. exit, clear
+--Break--
+r(1);
+
+. do "E:\Research Projects\Worker Accidents and Pollution\Regression Models\chapter_3_iv_probit.do"
+
+. * Start with a clean slate.
+. log close _all
+      name:  main
+       log:  E:\Research Projects\Worker Accidents and Pollution\Regression Models\manufacturing_linear_analysis_log.log
+  log type:  text
+ closed on:   3 Mar 2021, 21:41:50
+-----------------------------------------------------------------------------------------------------------------------------------------

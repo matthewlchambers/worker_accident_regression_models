@@ -56,10 +56,10 @@ pollution_data_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/
 pollution_file <- function (year) return (paste0('PM25_prediction_', year, '.csv'))
 
 # Define output parameters for the cleaned data file(s) to be saved.
-output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Data for Regression Models'
+output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Data for Regression Models/Fatality Only'
 # Uncomment the line below to send output to a directory set up for nighttime inversion data (as a robustness check)
 #output_dir <- 'E:/Research Projects/Worker Accidents and Pollution/Data/Data for Regression Models/Nighttime Inversions'
-output_file <- function (type = NULL) return(paste0('traffic_accidents_', type, '.csv'))
+output_file <- function (type = NULL) return(paste0('construction_accidents_', type, '.csv'))
 
 # Define functions to read in the different types of files, incorporating whatever tweaks need to be made
 # to read in cleanly. Note that in the column type strings, either _ or - omits the column, but alternating
@@ -69,6 +69,20 @@ read_in_osha <- function (year) {
   X <- read_csv(file.path(osha_data_dir, osha_file(year)), col_types = osha_input_column_types, progress = FALSE) %>%
   # For some reason, reading the date column in as a date doesn't work, so I have to read it in as character and
   # parse it to a date here.
+    mutate(event_date = mdy(event_date)) %>% rename(date = event_date) %>%
+    mutate(naics = gsub('X', '', naics) %>% as.integer()) %>%
+    mutate(sic = gsub('X', '', sic) %>% as.integer()) %>%
+    # Drop duplicate observations
+    distinct(date, est_address, .keep_all = TRUE)
+  return (X)
+}
+
+read_in_osha_fatalities <- function (year) {
+  osha_input_column_types <- '_-_ic_-_-_-ccc-_-c_-_-_-_-_-c-_'
+  X <- read_csv(file.path(osha_data_dir, osha_file(year)), col_types = osha_input_column_types, progress = FALSE) %>%
+  # For some reason, reading the date column in as a date doesn't work, so I have to read it in as character and
+  # parse it to a date here.
+    filter(degree == 'Fatality') %>% select(-degree) %>%
     mutate(event_date = mdy(event_date)) %>% rename(date = event_date) %>%
     mutate(naics = gsub('X', '', naics) %>% as.integer()) %>%
     mutate(sic = gsub('X', '', sic) %>% as.integer()) %>%
@@ -154,7 +168,7 @@ process_qcew_year <- function (year) {
     # aggregated by county, sector (2 digit NAICS), and ownership groups. Aggregation level 71 contains county level
     # total employment, which I also need. NAICS code 23 represents the construction industry, which I am
     # currently focusing on. If I come back and decide to expand that, I need to not drop the industry code.
-    filter((agglvl_code == 74 & industry_code == '31-33') | agglvl_code == 71) %>% select(-industry_code) %>%
+    filter((agglvl_code == 74 & industry_code == 23) | agglvl_code == 71) %>% select(-industry_code) %>%
     # I rename the monthly employment level variables for ease of working with the pivot_longer function.
     rename(emp_m1 = month1_emplvl) %>% rename(emp_m2 = month2_emplvl) %>% rename(emp_m3 = month3_emplvl) %>%
     # I reshape the data into a monthly, rather than quarterly, form.
@@ -185,9 +199,30 @@ process_osha_year <- function (year) {
     # I only want to consider privately owned establishments, as OSHA's applicability to government workplaces
     # is inconsistent.
     filter(ownership == 'Private') %>% select(-ownership) %>%
-    # First, to save time and memory, I filter to construction only and drop the NAICS code
+    # First, to save time and memory, I filter to the chosen industry only and drop the NAICS code
     mutate(naics_2 = floor(naics / 10000) %>% as.integer()) %>%
-    filter(naics_2 >= 31 & naics_2 <= 33) %>% select(-c('naics', 'naics_2', 'sic')) %>%
+    filter(naics_2 == 23) %>% select(-c('naics', 'naics_2', 'sic')) %>%
+    # Now I merge in the FIPS code from my geocoded address file, and drop any observations which could
+    # not be geocoded.
+    left_join(geocoded_addresses) %>% drop_na(fips) %>% select(-est_address) %>%
+    # I group by county and date, then get the sum of persons injured (in case of multiple accidents), as well as
+    # the number of incidents.
+    group_by(fips, date) %>% summarize(num_injured = num_injured %>% sum(), num_accidents = n())
+
+  return (osha_data)
+}
+
+process_osha_fatalities_year <- function (year) {
+  osha_data <- read_in_osha_fatalities(year)
+  geocoded_addresses <- read_in_geocodes()
+
+  osha_data %<>%
+    # I only want to consider privately owned establishments, as OSHA's applicability to government workplaces
+    # is inconsistent.
+    filter(ownership == 'Private') %>% select(-ownership) %>%
+    # First, to save time and memory, I filter to the chosen industry only and drop the NAICS code
+    mutate(naics_2 = floor(naics / 10000) %>% as.integer()) %>%
+    filter(naics_2 == 23) %>% select(-c('naics', 'naics_2', 'sic')) %>%
     # Now I merge in the FIPS code from my geocoded address file, and drop any observations which could
     # not be geocoded.
     left_join(geocoded_addresses) %>% drop_na(fips) %>% select(-est_address) %>%
@@ -202,6 +237,36 @@ process_one_year <- function (year) {
   # Read in all the data I need for this year.
   qcew_data <- process_qcew_year(year)
   osha_data <- process_osha_year(year)
+  inversion_data <- read_in_inversions(year)
+  weather_data <- read_in_weather(year)
+  pollution_data <- read_in_pollution(year)
+
+  # I assemble my main data file. The inversion data for a given year are my starting point, since they
+  # constitute a nice balanced panel.
+  mydata <- inversion_data %>%
+    # First I merge in the weather data
+    left_join(weather_data) %>%
+    # Then I merge in the pollution data
+    left_join(pollution_data) %>%
+    # Then I merge in the OSHA accident data.
+    left_join(osha_data) %>%
+    # Replace NAs (days unrepresented in the OSHA data) with 0s, as they represent observations with no accident.
+    mutate(num_injured = num_injured %>% replace_na(0) %>% as.integer()) %>%
+    mutate(num_accidents = num_accidents %>% replace_na(0) %>% as.integer()) %>%
+    # Then I merge in the QCEW employment data, after creating year and month variables to merge on. I then
+    # drop the year and month variables since I no longer need them.
+    mutate(year = year(date)) %>% mutate(month = month(date)) %>%
+    left_join(qcew_data) %>% select(-c('year', 'month')) %>%
+    # I generate a weekday factor variables, since weekday effects are likely important.
+    mutate(weekday = wday(date) %>% as_factor())
+
+  return(mydata)
+}
+
+process_one_fatalities_year <- function (year) {
+  # Read in all the data I need for this year.
+  qcew_data <- process_qcew_year(year)
+  osha_data <- process_osha_fatalities_year(year)
   inversion_data <- read_in_inversions(year)
   weather_data <- read_in_weather(year)
   pollution_data <- read_in_pollution(year)
@@ -258,8 +323,10 @@ process_one_year_traffic <- function (year) {
 all_data <- NULL
 
 for (i in begin_year:end_year) {
+  # Make sure to change the output directory if you mess around with these lines
   #year_data <- process_one_year(i)
-  year_data <- process_one_year_traffic(i)
+  year_data <- process_one_fatalities_year(i)
+  #year_data <- process_one_year_traffic(i)
 
   if (is.null(all_data)) {
     all_data <- year_data

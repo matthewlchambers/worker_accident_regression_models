@@ -1,0 +1,26 @@
+\begin{table}[htbp]\centering
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\caption{Thermal Inversion Instrument\label{tab1}}
+\begin{tabular}{l*{2}{D{.}{.}{-1}}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}\\
+                    &\multicolumn{1}{c}{est1}&\multicolumn{1}{c}{est2}\\
+\midrule
+mean\_pm25           &    -0.00116\sym{*}  &   -0.000451         \\
+                    &     (-2.18)         &     (-0.27)         \\
+\addlinespace
+mean\_temperature    &    0.000472\sym{***}&    0.000326         \\
+                    &      (4.46)         &      (0.90)         \\
+\addlinespace
+mean\_precipitation  &   -0.000244\sym{**} &   -0.000127         \\
+                    &     (-2.75)         &     (-0.46)         \\
+\addlinespace
+population          &   -9.94e-09         &   -4.73e-09         \\
+                    &     (-0.13)         &     (-0.06)         \\
+\midrule
+Observations        &     2268110         &     2268110         \\
+\bottomrule
+\multicolumn{3}{l}{\footnotesize \textit{t} statistics in parentheses}\\
+\multicolumn{3}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+\end{table}
